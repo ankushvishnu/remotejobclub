@@ -1,0 +1,92 @@
+[
+  {
+    "job_title": "Looking for Resident Engineer @ Remotely from US or Canada",
+    "company_name": "Lorven Technologies",
+    "location": "Anywhere",
+    "posted_via": "Ladders",
+    "salary": "100K–130K a year",
+    "date": "16 hours ago",
+    "URL": "https://www.google.com/search?ibp=htl;jobs&q=%22software+engineer+remote%22+google+jobs+in+New+York,+NY&htidocid=giOqgACVvCl_GL2WAAAAAA%3D%3D&hl=en-US&shndl=37&shmd=H4sIAAAAAAAA_xXKuwrCQBBGYWzT2llNLZiIYKONICJIGm912CST3dXN_GFnkfhAvqfanOLjZJ9Jdi6BpxdLHSJdWH3Lkugg1gtzpN3PeiQOb-oierpf6fftjZjW0IJOqEnZxMYRhI6ADTzbupQG3RSFasitJpN8kzfoCwjXGIsHav2nUmciD8Ekrlbr5ZgPYufTEvHFQjdunCDAetYveDTZsagAAAA&shmds=v1_ATWGeeNtyYcQ6ElMFnZ0zcWsIGIlWF-ggx5P33h2CP4EJBRhVw&source=sh/x/job/li/m1/1#fpstate=tldetail&htivrt=jobs&htiq=%22software+engineer+remote%22+google+jobs+in+New+York,+NY&htidocid=giOqgACVvCl_GL2WAAAAAA%3D%3D"
+  },
+  {
+    "job_title": "Senior Web Developer | Canada | Remote",
+    "company_name": "Grafana Labs",
+    "location": "Anywhere",
+    "posted_via": "Ladders",
+    "salary": "145,722–174,866 a year",
+    "date": "1 day ago",
+    "URL": "https://www.google.com/search?ibp=htl;jobs&q=%22software+engineer+remote%22+google+jobs+in+New+York,+NY&htidocid=C7aapDboaVEVZWDMAAAAAA%3D%3D&hl=en-US&shndl=37&shmd=H4sIAAAAAAAA_xXNsQrCMBCAYVyLT-B0s2AigovipFAQJx0cyyWeSSXNhdwhHXwCn9q6_Hzb33xnzeFGuecKd3JwojclLlThA0fM-MAJVxpYCVZwZgdCWH0EztAyh0SLfVQtsrNWJJkgitp743mwnMnxaF_s5J9OIlYqCZW6zXY9mpLDct5WfE4fuKCTH3B_n_yNAAAA&shmds=v1_ATWGeeOYA_WTee3fzEahm-secWtSXt2gg21DPO3jxh8xpME23A&source=sh/x/job/li/m1/1#fpstate=tldetail&htivrt=jobs&htiq=%22software+engineer+remote%22+google+jobs+in+New+York,+NY&htidocid=C7aapDboaVEVZWDMAAAAAA%3D%3D"
+  },
+  {
+    "job_title": "TeleRadiologist - Body Imaging 4-10PM",
+    "company_name": "Careerly",
+    "location": "Anywhere",
+    "posted_via": "Careerly",
+    "salary": "N/A",
+    "date": "16 hours ago",
+    "URL": "https://www.google.com/search?ibp=htl;jobs&q=%22software+engineer+remote%22+google+jobs+in+New+York,+NY&htidocid=Y8NVjbHXxmzvHqPEAAAAAA%3D%3D&hl=en-US&shndl=37&shmd=H4sIAAAAAAAA_xXIsQrCMBAAUFy7ujndLLSpoot10kEqCCLu5doeaeSaC7kM7V_4ydblDS_7rrLzm5he2DthsU4T5HCRfoZ6ROu8hUO-K5-PZe_SghLGbgDxcBOxTJtqSCnoyRhVLqwmTK4rOhmNeGplMh9p9U-jA0YKjIma_bGciuDtdn1djiLP4DzUkRh9_wMwb66JkwAAAA&shmds=v1_ATWGeeM-JYgVyth1xooucVHTYtiFSmuKmXRKi6AZUhf9ax2hsA&source=sh/x/job/li/m1/1#fpstate=tldetail&htivrt=jobs&htiq=%22software+engineer+remote%22+google+jobs+in+New+York,+NY&htidocid=Y8NVjbHXxmzvHqPEAAAAAA%3D%3D"
+  },
+  {
+    "job_title": "Project Man",
+    "company_name": "Apex Informatics",
+    "location": "Anywhere",
+    "posted_via": "Ladders",
+    "salary": "90K–130K a year",
+    "date": "15 hours ago",
+    "URL": "https://www.google.com/search?ibp=htl;jobs&q=%22software+engineer+remote%22+google+jobs+in+New+York,+NY&htidocid=NbiXj1nCABcwwrqUAAAAAA%3D%3D&hl=en-US&shndl=37&shmd=H4sIAAAAAAAA_xXLsQrCMBAA0L2Ts9PhKJiI4KKTU1Eo9A_KJZyJJb0LuRvy-dLlbW_Q4TQ3WSkaTMhwgY8EUMIWMwjDKJIKHZ_ZrOrDe9XikhraL7oomxemIN2vEnRn0YyNakGj5Xa_dlc5nQ-vSh3e_JW27VH_Tx0ywXUAAAA&shmds=v1_ATWGeePaX-By8-jHlgUmC4r3c0jwFHIRrVxC-ouelgNceaiGVA&source=sh/x/job/li/m1/1#fpstate=tldetail&htivrt=jobs&htiq=%22software+engineer+remote%22+google+jobs+in+New+York,+NY&htidocid=NbiXj1nCABcwwrqUAAAAAA%3D%3D"
+  },
+  {
+    "job_title": "FULLSTACK .NET Developer 4 years experience remote - MUST BE LOCAL TO THE CONTINENTIAL UNITED STATES",
+    "company_name": "IES Communications",
+    "location": "Anywhere",
+    "posted_via": "Ladders",
+    "salary": "80K–105K a year",
+    "date": "23 hours ago",
+    "URL": "https://www.google.com/search?ibp=htl;jobs&q=%22software+engineer+remote%22+google+jobs+in+New+York,+NY&htidocid=HTISfW0OQSxj5WEAAAAAAA%3D%3D&hl=en-US&shndl=37&shmd=H4sIAAAAAAAA_xWMsW6DQBAFlZYypatXWwpYUdIkFYaLg02g4KgRnFZABLeIPUdY-Ud_Uy7NSO9JM8H9Ifj9qPO80nFyQVgojZR-aOKFVrzgRu0qoM2vkawhrDSzIzzhq640jgp5mcQ5dAn9qZCUhc4K5eG_usi0SuHLWlXeOHMH8T0zgC1OzP1Eu_fBuUXeokhkCntxrRtNaHiO2FLHW_TNnfyjkaFdaZlaR83z62ELF9vvHzMfTnier3Y03mQrf2vTre_RAAAA&shmds=v1_ATWGeeN99eKkvigMVkuJxcowNQJPnm0VyMetBJCBV7jRJKeurg&source=sh/x/job/li/m1/1#fpstate=tldetail&htivrt=jobs&htiq=%22software+engineer+remote%22+google+jobs+in+New+York,+NY&htidocid=HTISfW0OQSxj5WEAAAAAAA%3D%3D"
+  },
+  {
+    "job_title": "Account Manager-Brooklyn/Staten Island, NY",
+    "company_name": "Alcon",
+    "location": "Anywhere",
+    "posted_via": "Ladders",
+    "salary": "96K–160K a year",
+    "date": "22 hours ago",
+    "URL": "https://www.google.com/search?ibp=htl;jobs&q=%22software+engineer+remote%22+google+jobs+in+New+York,+NY&htidocid=we5M283fUpcmTO51AAAAAA%3D%3D&hl=en-US&shndl=37&shmd=H4sIAAAAAAAA_xXMMQoCMRBAUSxs9ghWU4ubiGCjVWxEQRsrq2USQ1YdZ0ImwnoCr-3a_O795jtpnAtB3lzhhIwplnZXRJ70YXupWCPDQQn5toDzFVo4igeNWEIPwrAXSRRn277WrBtrVckkHdk9mCAvKxy9DPYhXv_ptMcSM43bbrVeDiZzmk8dBeEf13YAeYoAAAA&shmds=v1_ATWGeeN_-NK0Arz6UKlL_cNWwWz0cj1DzWn6ZY-P_c3ZCcStpw&source=sh/x/job/li/m1/1#fpstate=tldetail&htivrt=jobs&htiq=%22software+engineer+remote%22+google+jobs+in+New+York,+NY&htidocid=we5M283fUpcmTO51AAAAAA%3D%3D"
+  },
+  {
+    "job_title": "Senior Product Manager: Billing & ERP Modernization",
+    "company_name": "DAT Freight & Analytics",
+    "location": "Anywhere",
+    "posted_via": "WhatJobs",
+    "salary": "N/A",
+    "date": "16 hours ago",
+    "URL": "https://www.google.com/search?ibp=htl;jobs&q=%22software+engineer+remote%22+google+jobs+in+New+York,+NY&htidocid=jhR_3X9WPxVX2108AAAAAA%3D%3D&hl=en-US&shndl=37&shmd=H4sIAAAAAAAA_xWNywrCMBBFcdsfEFzNyoVgI4Kbuqr4gEKhqPuStkMSiTMlE6H6OX6pcXPhwDnc7DvLqhuS4wBN4OHVR6g1aYOhgIPz3pGBJZyuDdQ8YCD30dExwRoq7kBQh95C4guz8bjY2xhHKZQS8bmRmOQ-7_mpmLDjST24k_-0YnXA0euI7Xa3mfKRzGp-LO9wDuiMjem0JO3fqZcfESgNLqUAAAA&shmds=v1_ATWGeeMbYYqVuichFsDrd15jTPOITSzsOT6J4yvvcMqSWpGXgA&source=sh/x/job/li/m1/1#fpstate=tldetail&htivrt=jobs&htiq=%22software+engineer+remote%22+google+jobs+in+New+York,+NY&htidocid=jhR_3X9WPxVX2108AAAAAA%3D%3D"
+  },
+  {
+    "job_title": "Sr. Media Strategist, Manager",
+    "company_name": "Ansira",
+    "location": "Anywhere",
+    "posted_via": "Ladders",
+    "salary": "90K–120K a year",
+    "date": "15 hours ago",
+    "URL": "https://www.google.com/search?ibp=htl;jobs&q=%22software+engineer+remote%22+google+jobs+in+New+York,+NY&htidocid=W4oq-UFOciR1ixGQAAAAAA%3D%3D&hl=en-US&shndl=37&shmd=H4sIAAAAAAAA_xXMsQoCMQwA0M3hPsEps2grootOToJw033AkdbQVnpNSTIc-PPq8sY3fIbzJA5GehWEyQSNUlHbw4gNEwkc4MkBlFBiBm7wYE6Vtrds1vXqvWp1SQ2tRBd58dwo8OrfHPTPrBmFev298-lyXF1vabe5Ny2CX_aR0wJ9AAAA&shmds=v1_ATWGeePvtrO8lydRinlUzxNjD7M5pl2-4pufLQYgF_nuZYGCjQ&source=sh/x/job/li/m1/1#fpstate=tldetail&htivrt=jobs&htiq=%22software+engineer+remote%22+google+jobs+in+New+York,+NY&htidocid=W4oq-UFOciR1ixGQAAAAAA%3D%3D"
+  },
+  {
+    "job_title": "Isp Tech",
+    "company_name": "TEKsystems",
+    "location": "Anywhere",
+    "posted_via": "LinkedIn",
+    "salary": "N/A",
+    "date": "2 days ago",
+    "URL": "https://www.google.com/search?ibp=htl;jobs&q=%22software+engineer+remote%22+google+jobs+in+New+York,+NY&htidocid=C24G0WKFmTb4Kov2AAAAAA%3D%3D&hl=en-US&shndl=37&shmd=H4sIAAAAAAAA_xXHvQrCMBQG0L2PIIJ3Fk1EcNHJQfwdu5ekXJKWNDf0u0oFH15dDpzqUy2uKFRzG2lNN_EEduMvkuksEhLPDlG1YG8tkEyAOu1a08pgJbOXyfbi8adBdCOX5JSb7W4zmZLDcl6f7nhDeQB1mS7PrHh1KfGKjo8vFW0Idn4AAAA&shmds=v1_ATWGeeNKWF46UlMVj8dccWQxwGgHEVbQEInyHU8-P1_TBNZeyQ&source=sh/x/job/li/m1/1#fpstate=tldetail&htivrt=jobs&htiq=%22software+engineer+remote%22+google+jobs+in+New+York,+NY&htidocid=C24G0WKFmTb4Kov2AAAAAA%3D%3D"
+  },
+  {
+    "job_title": "Data Analyst ,Purchase, NY; Florham Park, NJ; Remote will be considered- Immediate position",
+    "company_name": "Futran Tech Solutions Pvt. Ltd.",
+    "location": "Anywhere",
+    "posted_via": "Ladders",
+    "salary": "80K–110K a year",
+    "date": "16 hours ago",
+    "URL": "https://www.google.com/search?ibp=htl;jobs&q=%22software+engineer+remote%22+google+jobs+in+New+York,+NY&htidocid=dm9qPpEYLD5xpCPvAAAAAA%3D%3D&hl=en-US&shndl=37&shmd=H4sIAAAAAAAA_xWNsWrDQBBESetPSJOpg30KhjRRZQg2MSGIOE0qs5IW6eK7W3G7Suzf9Bfl3AzMPHizuN4t8isZYZMoXNSwbObcjaS8xMd3jW2QPFJEQ_lUln2NT45ijD8fAlpGJ0l9z5n7Fd5i5N5ToZOoNy8JK-ylhTIVKUrfiQyB7-vRbNKXqlINblAj853rJFaSuJVz9SOt3uKoI2WeQnEe189PZzel4fFhO1umhC8uzoOE-fakaH7N4d169w9xLz0n1QAAAA&shmds=v1_ATWGeeNp0n7_WTUlbIzbEs6F0msOd9WEg--gb8nDc49yOQ3GYA&source=sh/x/job/li/m1/1#fpstate=tldetail&htivrt=jobs&htiq=%22software+engineer+remote%22+google+jobs+in+New+York,+NY&htidocid=dm9qPpEYLD5xpCPvAAAAAA%3D%3D"
+  }
+]
