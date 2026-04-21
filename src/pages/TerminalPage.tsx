@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Upload, FileType, CheckCircle2, Zap, ShieldAlert, Cpu, Briefcase } from 'lucide-react';
+import { Upload, FileType, CheckCircle2, Zap, ShieldAlert, Cpu, Briefcase, Bookmark, BookmarkCheck } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import { useNavigate } from 'react-router-dom';
@@ -56,9 +56,33 @@ export function TerminalPage() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Track which jobs user has already saved
+  const [savedJobIds, setSavedJobIds] = useState<Set<string>>(new Set());
+  const [savingJobId, setSavingJobId] = useState<string | null>(null);
+
   useEffect(() => {
     if (!loading && !user) navigate('/auth');
   }, [user, loading, navigate]);
+
+  // Load already-saved job IDs on mount
+  useEffect(() => {
+    if (!user) return;
+    supabase
+      .from('saved_jobs')
+      .select('job_posting_id')
+      .eq('user_id', user.id)
+      .then(({ data }) => {
+        if (data) setSavedJobIds(new Set(data.map((r: any) => r.job_posting_id)));
+      });
+  }, [user]);
+
+  const handleSaveJob = async (jobId: string) => {
+    if (!user || savingJobId) return;
+    setSavingJobId(jobId);
+    const { error } = await supabase.from('saved_jobs').insert({ user_id: user.id, job_posting_id: jobId });
+    if (!error) setSavedJobIds(prev => new Set([...prev, jobId]));
+    setSavingJobId(null);
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -329,16 +353,34 @@ export function TerminalPage() {
                       </div>
                     </div>
 
-                    <div className="flex flex-col items-end justify-between min-w-[140px] border-t border-[var(--color-brand-border)] pt-4 md:border-t-0 md:pt-0">
-                      <div className="text-right text-xs text-[var(--color-brand-muted)] mb-4">
-                        <div className="flex items-center gap-1 justify-end mt-2 text-[var(--color-brand-green)]">
+                    <div className="flex flex-col items-end justify-between min-w-[140px] border-t border-[var(--color-brand-border)] pt-4 md:border-t-0 md:pt-0 gap-3">
+                      <div className="text-right text-xs text-[var(--color-brand-muted)] mb-2">
+                        <div className="flex items-center gap-1 justify-end text-[var(--color-brand-green)]">
                           <CheckCircle2 className="w-4 h-4" /> VERIFIED
                         </div>
                       </div>
-                      
+
                       <a href={job.apply_url || job.url || "#"} target="_blank" rel="noreferrer" className="w-full py-2 bg-transparent border border-[var(--color-brand-green)] text-[var(--color-brand-green)] hover:bg-[var(--color-brand-green)] hover:text-black transition-colors font-medium text-sm flex items-center justify-center gap-2">
                         ACCESS LINK <span className="text-[10px]">↗</span>
                       </a>
+
+                      <button
+                        onClick={() => handleSaveJob(job.id)}
+                        disabled={savedJobIds.has(job.id) || savingJobId === job.id}
+                        className={`w-full py-2 border text-xs font-medium flex items-center justify-center gap-2 transition-colors ${
+                          savedJobIds.has(job.id)
+                            ? 'border-[var(--color-brand-amber)]/40 text-[var(--color-brand-amber)]/60 cursor-default'
+                            : 'border-[var(--color-brand-border-hi)] text-[var(--color-brand-muted)] hover:border-[var(--color-brand-amber)] hover:text-[var(--color-brand-amber)]'
+                        }`}
+                      >
+                        {savedJobIds.has(job.id) ? (
+                          <><BookmarkCheck className="w-3.5 h-3.5" /> SAVED</>
+                        ) : savingJobId === job.id ? (
+                          <span className="animate-pulse">SAVING...</span>
+                        ) : (
+                          <><Bookmark className="w-3.5 h-3.5" /> SAVE JOB</>
+                        )}
+                      </button>
                     </div>
                   </div>
                 </motion.div>

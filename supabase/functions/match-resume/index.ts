@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "jsr:@supabase/supabase-js@2"
-import { Buffer } from "node:buffer"
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -21,16 +21,16 @@ serve(async (req) => {
     // Require Auth for MVP
     const { data: { user }, error: authError } = await supabaseClient.auth.getUser()
     if (authError || !user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized: Please authenticate first.' }), { 
-        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      return new Response(JSON.stringify({ error: 'Unauthorized: Please authenticate first.' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
 
     const { resumeText, constraints } = await req.json()
-    
+
     if (!resumeText) {
-      return new Response(JSON.stringify({ error: 'No resume text provided' }), { 
-        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      return new Response(JSON.stringify({ error: 'No resume text provided' }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
 
@@ -39,8 +39,9 @@ serve(async (req) => {
       throw new Error("OPENROUTER_API_KEY is not set in Edge Function secrets")
     }
 
-    const prompt = `Analyze this candidate resume and extract the top 3 core technical skills/keywords. 
-Return ONLY valid JSON: {"title": "job title", "keywords": ["skill1", "skill2", "skill3"]}. 
+    // Step 1: Extract keywords from resume via LLM
+    const prompt = `Analyze this candidate resume and extract the top 3 core technical skills/keywords.
+Return ONLY valid JSON: {"title": "job title", "keywords": ["skill1", "skill2", "skill3"]}.
 Resume: \n${resumeText}`
 
     const orRes = await fetch("https://openrouter.ai/api/v1/chat/completions", {
@@ -55,7 +56,7 @@ Resume: \n${resumeText}`
         messages: [{ role: "user", content: prompt }]
       })
     })
-    
+
     if (!orRes.ok) {
       const errText = await orRes.text()
       throw new Error(`OpenRouter API Error: ${errText}`)
@@ -75,10 +76,7 @@ Resume: \n${resumeText}`
       console.warn("Failed to parse OpenRouter response", e)
     }
 
-    // Query DB for ACTIVE jobs based on constraint tech OR top keyword
-    const topKeyword = constraints?.tech || keywords[0] || 'remote'
-    
-    // We get 30 jobs
+    // Step 2: Query DB for ACTIVE jobs
     const { data: dbJobs, error: dbError } = await supabaseClient
       .from('job_postings')
       .select('*')
@@ -88,45 +86,16 @@ Resume: \n${resumeText}`
 
     if (dbError) throw dbError
 
-    let matchedJobs = dbJobs || []
-    
+    const matchedJobs = dbJobs || []
+
+    // If no DB jobs match, return empty gracefully — no external fallback
     if (matchedJobs.length === 0) {
-      // No cached jobs match -> Trigger Live Deep Web Scrape
-      const apifyToken = Deno.env.get('APIFY_TOKEN')
-      if (!apifyToken) throw new Error("APIFY_TOKEN is missing")
-
-      const startRes = await fetch(
-        `https://api.apify.com/v2/acts/orgupdate~google-jobs-scraper/runs?token=${apifyToken}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            countryName: "usa", // standardizing to US remote for MVP as in original tracker
-            includeKeyword: keywords.join(' ') + " remote",
-            pagesToFetch: 1,
-            datePosted: "3days"
-          })
-        }
-      );
-
-      if (!startRes.ok) {
-        const errText = await startRes.text()
-        throw new Error(`Failed to start live-scrape via Apify: ${errText}`)
-      }
-      
-      const startData = await startRes.json();
-      const runId = startData.data?.id;
-
-      return new Response(JSON.stringify({ 
-        status: "scraping", 
-        runId, 
-        keywords 
-      }), {
+      return new Response(JSON.stringify({ matches: [] }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
 
-    // LLM CURATION PASS OVER THE DB JOBS
+    // Step 3: LLM curation pass over DB jobs
     const curationPrompt = `You are an elite tech recruiter AI.
 Candidate Keywords: ${keywords.join(", ")}
 Constraints: Role=${constraints?.role||'Any'}, Location=${constraints?.location||'Any'}, Tech=${constraints?.tech||'Any'}, Arrangement=${constraints?.arrangement||'Any'}
@@ -149,7 +118,7 @@ Return ONLY valid JSON in this exact structure:
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: "openrouter/elephant-alpha", 
+        model: "openrouter/elephant-alpha",
         max_tokens: 350,
         response_format: { type: "json_object" },
         messages: [{ role: "user", content: curationPrompt }]
@@ -162,7 +131,7 @@ Return ONLY valid JSON in this exact structure:
     }
 
     const curateData = await curateRes.json()
-    let curated = []
+    let curated: any[] = []
     try {
       const content = curateData.choices?.[0]?.message?.content || "{}"
       const jsonMatch = content.match(/\{[\s\S]*\}/)
@@ -188,8 +157,8 @@ Return ONLY valid JSON in this exact structure:
 
   } catch (err: any) {
     console.error("match-resume error:", err)
-    return new Response(JSON.stringify({ error: err.message }), { 
-      status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+    return new Response(JSON.stringify({ error: err.message }), {
+      status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     })
   }
 })
