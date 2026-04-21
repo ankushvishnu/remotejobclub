@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { Terminal, ShieldAlert, Zap, Briefcase, Search, CheckCircle2 } from 'lucide-react';
+import { Terminal, ShieldAlert, Briefcase, Search, CheckCircle2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
+import { useAuth } from '../hooks/useAuth';
 
 const TypewriterText = ({ text, className = '', speed = 30 }: { text: string, className?: string, speed?: number }) => {
   const [displayedText, setDisplayedText] = React.useState('');
@@ -23,6 +24,7 @@ const TypewriterText = ({ text, className = '', speed = 30 }: { text: string, cl
 
 export function HomePage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [jobs, setJobs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isFeedExpanded, setIsFeedExpanded] = useState(false);
@@ -85,7 +87,7 @@ export function HomePage() {
           <p className="text-[#8cdb8b] text-sm mb-6">Drop your resume, bypassing the generic crowd.</p>
           
           <button 
-            onClick={() => navigate('/auth')}
+            onClick={() => navigate(user ? '/terminal' : '/auth')}
             className="px-6 py-3 bg-[var(--color-brand-green)] border-2 border-[var(--color-brand-green)] text-black font-bold tracking-widest hover:bg-transparent hover:text-[var(--color-brand-green)] transition-all flex items-center justify-center gap-3 w-full"
           >
             <Terminal className="w-5 h-5" />

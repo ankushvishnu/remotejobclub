@@ -1,4 +1,4 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { createClient } from "jsr:@supabase/supabase-js@2"
 
 const corsHeaders = {
@@ -6,25 +6,39 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
 
   try {
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
-    )
-
-    // Require Auth for MVP
-    const { data: { user }, error: authError } = await supabaseClient.auth.getUser()
-    if (authError || !user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized: Please authenticate first.' }), {
+    // Extract bearer token from request
+    const authHeader = req.headers.get('Authorization')
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return new Response(JSON.stringify({ error: 'Unauthorized: Missing authorization header.' }), {
         status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
+    const token = authHeader.replace('Bearer ', '')
+
+    // Use admin client to verify user server-side (avoids ES256 local parse issue)
+    const supabaseAdmin = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+    )
+    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token)
+    if (authError || !user) {
+      return new Response(JSON.stringify({ error: 'Unauthorized: Invalid or expired session.' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+
+    // User-context client for DB queries (respects RLS)
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      { global: { headers: { Authorization: `Bearer ${token}` } } }
+    )
 
     const { resumeText, constraints } = await req.json()
 
@@ -142,6 +156,8 @@ Return ONLY valid JSON in this exact structure:
       console.warn("Failed to parse curation", e)
     }
 
+    // Build matches and deduplicate by job id to prevent duplicate React keys
+    const seen = new Set<string>()
     const finalMatches = curated.map((c: any) => {
       const jobBase = matchedJobs.find((j: any) => j.title === c.title || j.company_domain === c.company_domain) || matchedJobs[0]
       return {
@@ -149,7 +165,11 @@ Return ONLY valid JSON in this exact structure:
         match_score: c.match_score || 8.0,
         curation_notes: c.curation_notes || "Fits the specified constraints cleanly."
       }
-    }).filter(Boolean).slice(0, 5)
+    }).filter((job: any) => {
+      if (!job || seen.has(job.id)) return false
+      seen.add(job.id)
+      return true
+    }).slice(0, 5)
 
     return new Response(JSON.stringify({ matches: finalMatches }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
