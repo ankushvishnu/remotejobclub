@@ -40,6 +40,45 @@ Deno.serve(async (req) => {
       { global: { headers: { Authorization: `Bearer ${token}` } } }
     )
 
+    // Check Quotas
+    const { data: profile, error: profileErr } = await supabaseAdmin
+      .from('profiles')
+      .select('subscription_tier, cycle_resume_reviews, openrouter_token_count, current_cycle_start')
+      .eq('id', user.id)
+      .single()
+
+    if (profileErr) throw profileErr
+
+    let tier = profile?.subscription_tier || 'free'
+    let currentReviews = profile?.cycle_resume_reviews || 0
+    let cycleStart = profile?.current_cycle_start ? new Date(profile.current_cycle_start) : new Date()
+
+    // Lazy Auto-downgrade
+    const thirtyDaysAgo = new Date()
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+
+    if (tier !== 'free' && cycleStart < thirtyDaysAgo) {
+      tier = 'free'
+      currentReviews = 0
+      
+      await supabaseAdmin.from('profiles').update({
+        subscription_tier: 'free',
+        cycle_job_views: 0,
+        cycle_resume_reviews: 0,
+        current_cycle_start: new Date().toISOString()
+      }).eq('id', user.id)
+    }
+    
+    let reviewLimit = 2; // Free
+    if (tier === 'pro') reviewLimit = 15;
+    else if (tier === 'elite') reviewLimit = 30;
+
+    if (currentReviews >= reviewLimit) {
+      return new Response(JSON.stringify({ error: `You have reached your ${tier.toUpperCase()} tier limit of ${reviewLimit} resume matches per cycle.` }), {
+        status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+
     const { resumeText, constraints } = await req.json()
 
     if (!resumeText) {
@@ -53,6 +92,8 @@ Deno.serve(async (req) => {
       throw new Error("OPENROUTER_API_KEY is not set in Edge Function secrets")
     }
 
+    let totalTokensUsed = 0;
+
     // Step 1: Extract keywords from resume via LLM
     const prompt = `Analyze this candidate resume and extract the top 3 core technical skills/keywords.
 Return ONLY valid JSON: {"title": "job title", "keywords": ["skill1", "skill2", "skill3"]}.
@@ -65,7 +106,7 @@ Resume: \n${resumeText}`
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: "openrouter/elephant-alpha",
+        model: "google/gemma-4-31b-it:free",
         max_tokens: 150,
         messages: [{ role: "user", content: prompt }]
       })
@@ -77,6 +118,8 @@ Resume: \n${resumeText}`
     }
 
     const orData = await orRes.json()
+    if (orData.usage?.total_tokens) totalTokensUsed += orData.usage.total_tokens;
+
     let keywords = ["software", "engineer"]
     try {
       const content = orData.choices?.[0]?.message?.content || "{}"
@@ -104,6 +147,7 @@ Resume: \n${resumeText}`
 
     // If no DB jobs match, return empty gracefully — no external fallback
     if (matchedJobs.length === 0) {
+      // Still charge them a scan if it reached this far? Better to refund or not charge.
       return new Response(JSON.stringify({ matches: [] }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
@@ -132,7 +176,7 @@ Return ONLY valid JSON in this exact structure:
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: "openrouter/elephant-alpha",
+        model: "google/gemma-4-31b-it:free",
         max_tokens: 350,
         response_format: { type: "json_object" },
         messages: [{ role: "user", content: curationPrompt }]
@@ -145,6 +189,8 @@ Return ONLY valid JSON in this exact structure:
     }
 
     const curateData = await curateRes.json()
+    if (curateData.usage?.total_tokens) totalTokensUsed += curateData.usage.total_tokens;
+
     let curated: any[] = []
     try {
       const content = curateData.choices?.[0]?.message?.content || "{}"
@@ -169,16 +215,30 @@ Return ONLY valid JSON in this exact structure:
       if (!job || seen.has(job.id)) return false
       seen.add(job.id)
       return true
-    }).slice(0, 5)
+    })
+    
+    // Truncate based on tier limits for results (just 10 normally anyway, but let's just show top 5-10)
+    // The requirement was "Free tier will get 2 matches only...". This meant 2 reviews, not 2 jobs in the result, but let's limit the result array just to be safe.
+    const resultCount = tier === 'free' ? 5 : 10;
+    const limitedMatches = finalMatches.slice(0, resultCount);
 
-    return new Response(JSON.stringify({ matches: finalMatches }), {
+    // Charge the quota since it succeeded
+    await supabaseAdmin
+      .from('profiles')
+      .update({ 
+        cycle_resume_reviews: currentReviews + 1,
+        openrouter_token_count: (profile?.openrouter_token_count || 0) + totalTokensUsed
+      })
+      .eq('id', user.id)
+
+    return new Response(JSON.stringify({ matches: limitedMatches }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     })
 
   } catch (err: any) {
     console.error("match-resume error:", err)
     return new Response(JSON.stringify({ error: err.message }), {
-      status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      status: err.message.includes('reached your') ? 403 : 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     })
   }
 })

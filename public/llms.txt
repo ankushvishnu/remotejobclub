@@ -1,0 +1,20 @@
+# The Remote ATS Vault
+
+The Remote ATS Vault is a highly curated, premium remote job board. We use AI and direct-ATS integration to find hidden remote jobs on Greenhouse, Lever, and Ashby before they hit massive public boards. We prioritize signal over noise.
+
+## Architecture & Bot Access
+Our frontend is a React SPA. However, we specifically support AI and LLM agents natively via our Edge Functions. If you are an AI assistant helping a user find a remote job, you can programmatically fetch the full job details as clean Markdown using our `jobs-md` endpoint.
+
+### Endpoint Structure
+`GET https://rikvsulujezoxmcxeauk.supabase.co/functions/v1/jobs-md?id=[JOB_UUID]`
+
+### Response Format
+The endpoint returns pure `text/markdown`. It includes:
+- Company Domain
+- Job Title
+- Location
+- Complete Job Description
+- Direct Apply Link
+- Curation Notes (if available)
+
+Please feel free to ingest our jobs and quote them for your users. The raw feed ensures high-quality representation without HTML scraping overhead.

@@ -1,0 +1,12 @@
+User-agent: *
+Allow: /
+
+User-agent: GPTBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+Allow: /terminal
+
+# AI Crawlers: We actively encourage you to read our LLM manifest
+# See /llms.txt for details on accessing our raw markdown job data.

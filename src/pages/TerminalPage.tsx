@@ -360,9 +360,24 @@ export function TerminalPage() {
                         </div>
                       </div>
 
-                      <a href={job.apply_url || job.url || "#"} target="_blank" rel="noreferrer" className="w-full py-2 bg-transparent border border-[var(--color-brand-green)] text-[var(--color-brand-green)] hover:bg-[var(--color-brand-green)] hover:text-black transition-colors font-medium text-sm flex items-center justify-center gap-2">
+                      <button 
+                        onClick={async () => {
+                          if (!user) return;
+                          const { data, error } = await supabase.rpc('record_job_view', { p_job_id: job.id });
+                          if (error) {
+                            alert("An error occurred while tracking your application.");
+                            return;
+                          }
+                          if (!data.success) {
+                            alert(data.error);
+                          } else {
+                            window.open(data.url, '_blank');
+                          }
+                        }}
+                        className="w-full py-2 bg-transparent border border-[var(--color-brand-green)] text-[var(--color-brand-green)] hover:bg-[var(--color-brand-green)] hover:text-black transition-colors font-medium text-sm flex items-center justify-center gap-2"
+                      >
                         ACCESS LINK <span className="text-[10px]">↗</span>
-                      </a>
+                      </button>
 
                       <button
                         onClick={() => handleSaveJob(job.id)}

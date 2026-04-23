@@ -17,12 +17,19 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? Deno.env.get('SUPABASE_ANON_KEY') ?? ''
     )
 
-    const targets = [
-      { name: 'Zapier', ats: 'ashby', board: 'zapier' },
-      { name: 'DuckDuckGo', ats: 'ashby', board: 'duckduckgo' },
-      { name: 'Canonical', ats: 'greenhouse', board: 'canonical' },
-      { name: 'HubSpot', ats: 'custom', board: 'hubspot' } // Just placeholders for tests
-    ];
+    // Fetch active targets from the company_directory table
+    const { data: targets, error: fetchErr } = await supabaseClient
+      .from('company_directory')
+      .select('*')
+      .eq('status', 'ACTIVE')
+
+    if (fetchErr) throw fetchErr
+
+    if (!targets || targets.length === 0) {
+      return new Response(JSON.stringify({ success: true, message: 'No active companies found in directory' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
 
     let allJobs: any[] = [];
 
@@ -78,12 +85,12 @@ serve(async (req) => {
     for (const t of targets) {
       try {
         let jobs = [];
-        if (t.ats === 'ashby') jobs = await fetchAshby(t.name, t.board);
-        if (t.ats === 'greenhouse') jobs = await fetchGreenhouse(t.name, t.board);
-        if (t.ats === 'lever') jobs = await fetchLever(t.name, t.board);
+        if (t.ats_provider === 'ashby') jobs = await fetchAshby(t.company_name, t.board_token);
+        if (t.ats_provider === 'greenhouse') jobs = await fetchGreenhouse(t.company_name, t.board_token);
+        if (t.ats_provider === 'lever') jobs = await fetchLever(t.company_name, t.board_token);
         if (jobs && jobs.length > 0) allJobs = [...allJobs, ...jobs.slice(0, 30)]; // Take top 30 from each
       } catch (err) {
-        console.warn(`Failed scraping ${t.name}`, err);
+        console.warn(`Failed scraping ${t.company_name}`, err);
       }
     }
 
@@ -100,7 +107,8 @@ serve(async (req) => {
 
     return new Response(JSON.stringify({ 
       success: true, 
-      scraped_count: allJobs.length 
+      scraped_count: allJobs.length,
+      companies_checked: targets.length
     }, null, 2), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });

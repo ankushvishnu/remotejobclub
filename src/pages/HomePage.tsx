@@ -32,18 +32,48 @@ export function HomePage() {
   const [filterTech, setFilterTech] = useState('');
   const [filterLocation, setFilterLocation] = useState('');
 
+  const [tierLimit, setTierLimit] = useState(15); // Default to Free tier limit
+
   useEffect(() => {
     fetchJobs();
-  }, []);
+  }, [user]);
 
   const fetchJobs = async () => {
     setLoading(true);
-    const { data } = await supabase
-      .from('job_postings')
+    let limit = 15; // Free default
+
+    if (user) {
+      // Get user tier
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('subscription_tier')
+        .eq('id', user.id)
+        .single();
+        
+      if (profile) {
+        if (profile.subscription_tier === 'elite') limit = 75;
+        else if (profile.subscription_tier === 'pro') limit = 45;
+      }
+    }
+    setTierLimit(limit);
+
+    // Fetch from vw_healthy_jobs which has anti-spam built in
+    // Fallback to job_postings if the view doesn't exist yet
+    let { data, error } = await supabase
+      .from('vw_healthy_jobs')
       .select('*')
-      .eq('status', 'ACTIVE')
       .order('created_at', { ascending: false })
-      .limit(30);
+      .limit(limit);
+    
+    if (error || !data) {
+      // Fallback: view might not exist yet
+      const fallback = await supabase
+        .from('job_postings')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(limit);
+      data = fallback.data;
+    }
     
     if (data) setJobs(data);
     setLoading(false);
@@ -54,6 +84,27 @@ export function HomePage() {
     if (filterLocation && !j.location?.toLowerCase().includes(filterLocation.toLowerCase())) return false;
     return true;
   });
+
+  const handleApplyClick = async (jobId: string) => {
+    if (!user) {
+      alert("You must be logged in to apply for jobs. Join the Remote Job Club today!");
+      navigate('/auth');
+      return;
+    }
+
+    const { data, error } = await supabase.rpc('record_job_view', { p_job_id: jobId });
+    
+    if (error) {
+      alert("An error occurred while tracking your application.");
+      return;
+    }
+
+    if (!data.success) {
+      alert(data.error);
+    } else {
+      window.open(data.url, '_blank');
+    }
+  };
 
   return (
     <motion.div 
@@ -75,10 +126,10 @@ export function HomePage() {
       <div className="grid md:grid-cols-2 gap-8 w-full mt-4">
         <div className="border border-[var(--color-brand-border-hi)] bg-[var(--color-brand-bg2)] p-6 hover:border-[var(--color-brand-amber)] transition-colors">
           <h3 className="text-[var(--color-brand-amber)] font-semibold text-lg mb-3 flex items-center gap-2">
-            <ShieldAlert className="w-5 h-5"/> WHO WE ARE
+            <ShieldAlert className="w-5 h-5"/> WHY WE EXIST
           </h3>
           <p className="text-[var(--color-brand-muted)] text-sm leading-relaxed">
-            We are automated curators. We deploy sensors to scrape private career pages and ATS platforms to find active, verified remote roles before they hit the massive public boards.
+            I applied to 200+ remote jobs and got ghosted by every giant job board. So I built this. The Vault only surfaces verified, active roles from companies that are actually hiring — not ghost jobs, not expired listings, not recruiter spam.
           </p>
         </div>
         
@@ -133,7 +184,7 @@ export function HomePage() {
               {(isFeedExpanded ? filteredJobs : filteredJobs.slice(0, 5)).map((job, idx) => (
                 <div key={job.id || idx} className="border-b border-[var(--color-brand-border)] p-4 hover:bg-[var(--color-brand-bg)] transition-colors flex flex-col md:flex-row md:items-center justify-between gap-4">
                   <div className="flex-grow">
-                    <div className="text-[var(--color-brand-muted)] text-xs mb-1 uppercase tracking-wider">{job.company_domain}</div>
+                    <div className="text-[var(--color-brand-muted)] text-xs mb-1 uppercase tracking-wider">{(job.company_domain || '').replace(/\.placeholder$/i, '').split('.')[0]}</div>
                     <div className="text-[var(--color-brand-text)] font-semibold text-lg">{job.title}</div>
                     <div className="flex items-center gap-3 mt-2 text-xs text-[var(--color-brand-muted)]">
                       <span className="flex items-center gap-1"><CheckCircle2 className="w-3 h-3 text-[var(--color-brand-green)]"/> {job.location || 'Remote'}</span>
@@ -142,14 +193,12 @@ export function HomePage() {
                     </div>
                   </div>
                   <div>
-                    <a 
-                      href={job.url} 
-                      target="_blank" 
-                      rel="noreferrer" 
+                    <button 
+                      onClick={() => handleApplyClick(job.id)}
                       className="whitespace-nowrap px-4 py-2 border border-[var(--color-brand-green)] text-[var(--color-brand-green)] hover:bg-[var(--color-brand-green)] hover:text-black transition-colors text-sm font-medium"
                     >
                       DIRECT APPLY ↗
-                    </a>
+                    </button>
                   </div>
                 </div>
               ))}

@@ -9,6 +9,7 @@ import { DevScanner } from './pages/DevScanner';
 import { PaymentSuccess } from './pages/PaymentSuccess';
 import { DashboardPage } from './pages/DashboardPage';
 import { PrivacyPage } from './pages/PrivacyPage';
+import { UpgradePage } from './pages/UpgradePage';
 import { useAuth } from './hooks/useAuth';
 import { supabase } from './lib/supabase';
 
@@ -97,32 +98,42 @@ function AppShell() {
             user && (
               <>
                 <Link
+                  to="/upgrade"
+                  className={`text-xs whitespace-nowrap transition-colors border px-3 py-1 hidden sm:inline-flex items-center ${
+                    location.pathname === '/upgrade'
+                      ? 'border-[var(--color-brand-green)] text-[var(--color-brand-green)]'
+                      : 'border-[var(--color-brand-border)] text-[var(--color-brand-green)] hover:bg-[var(--color-brand-green)] hover:text-black font-semibold'
+                  }`}
+                >
+                  [ UPGRADE ]
+                </Link>
+                <Link
                   to="/dashboard"
-                  className={`text-xs flex items-center gap-1 transition-colors border px-3 py-1 ${
+                  className={`text-xs whitespace-nowrap inline-flex items-center gap-1 transition-colors border px-3 py-1 ${
                     location.pathname === '/dashboard'
                       ? 'border-[var(--color-brand-amber)] text-[var(--color-brand-amber)]'
                       : 'border-[var(--color-brand-border)] text-[var(--color-brand-muted)] hover:text-[var(--color-brand-amber)] hover:border-[var(--color-brand-amber)]'
                   }`}
                 >
-                  <LayoutDashboard className="w-3 h-3" />
-                  <span className="hidden sm:inline">[ DASHBOARD ]</span>
+                  <LayoutDashboard className="w-3 h-3 shrink-0" />
+                  <span className="hidden sm:inline">DASH</span>
                 </Link>
                 <Link
                   to="/terminal"
-                  className={`text-xs transition-colors border px-3 py-1 ${
+                  className={`text-xs whitespace-nowrap inline-flex items-center transition-colors border px-3 py-1 hidden sm:inline-flex ${
                     location.pathname === '/terminal'
                       ? 'border-[var(--color-brand-green)] text-[var(--color-brand-green)]'
                       : 'border-[var(--color-brand-border)] text-[var(--color-brand-muted)] hover:text-[var(--color-brand-green)] hover:border-[var(--color-brand-green)]'
                   }`}
                 >
-                  [ TERMINAL ]
+                  [ SCAN ]
                 </Link>
                 <button
                   onClick={handleLogout}
-                  className="flex items-center gap-1 text-xs text-[var(--color-brand-muted)] hover:text-[var(--color-brand-amber)] hover:border-[var(--color-brand-amber)] transition-colors border border-[var(--color-brand-border)] px-3 py-1"
+                  className="inline-flex items-center gap-1 text-xs whitespace-nowrap text-[var(--color-brand-muted)] hover:text-[var(--color-brand-amber)] hover:border-[var(--color-brand-amber)] transition-colors border border-[var(--color-brand-border)] px-3 py-1"
                 >
-                  <LogOut className="w-3 h-3" />
-                  <span>[ EXIT ]</span>
+                  <LogOut className="w-3 h-3 shrink-0" />
+                  <span className="hidden sm:inline">EXIT</span>
                 </button>
               </>
             )
@@ -152,6 +163,7 @@ function AppShell() {
           <Route path="/terminal" element={<TerminalPage />} />
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/privacy" element={<PrivacyPage />} />
+          <Route path="/upgrade" element={<UpgradePage />} />
           <Route path="/dev/scanner" element={<DevScanner />} />
           <Route path="/payment/success" element={<PaymentSuccess />} />
         </Routes>

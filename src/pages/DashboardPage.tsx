@@ -172,7 +172,11 @@ export function DashboardPage() {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          {profile?.subscription_tier === 'pro' ? (
+          {profile?.subscription_tier === 'elite' ? (
+            <div className="flex items-center gap-2 border border-[var(--color-brand-amber)]/60 bg-[var(--color-brand-amber)]/10 text-[var(--color-brand-amber)] px-4 py-2 text-sm font-bold">
+              <Zap className="w-4 h-4" /> ELITE OPERATOR
+            </div>
+          ) : profile?.subscription_tier === 'pro' ? (
             <div className="flex items-center gap-2 border border-yellow-500/60 bg-yellow-500/10 text-yellow-400 px-4 py-2 text-sm font-bold">
               <Crown className="w-4 h-4" /> PRO OPERATOR
             </div>
@@ -249,17 +253,24 @@ export function DashboardPage() {
           </div>
 
           {/* Upgrade CTA */}
-          {profile?.subscription_tier !== 'pro' && (
+          {profile?.subscription_tier !== 'elite' && (
             <div className="border border-[var(--color-brand-amber)] bg-[var(--color-brand-amber)]/5 p-6">
               <div className="flex items-start gap-4">
                 <Crown className="w-8 h-8 text-[var(--color-brand-amber)] flex-shrink-0 mt-1" />
                 <div className="flex-grow">
-                  <h3 className="font-bold text-[var(--color-brand-amber)] mb-1">UPGRADE TO PRO</h3>
+                  <h3 className="font-bold text-[var(--color-brand-amber)] mb-1">
+                    {profile?.subscription_tier === 'pro' ? 'UPGRADE TO ELITE' : 'UPGRADE YOUR PASS'}
+                  </h3>
                   <p className="text-xs text-[var(--color-brand-muted)] mb-4">
-                    Get unlimited vault scans, priority job feeds, and early access to hidden leads.
+                    {profile?.subscription_tier === 'pro'
+                      ? 'Go Elite for 75 job views and 30 AI resume scans per cycle.'
+                      : 'Get up to 45 job views, 15 AI resume scans, and priority access to hidden leads.'}
                   </p>
-                  <button className="px-6 py-2 bg-[var(--color-brand-amber)] text-black font-bold text-sm tracking-widest hover:bg-[#f5b545] transition-colors">
-                    UNLOCK PRO ACCESS →
+                  <button
+                    onClick={() => navigate('/upgrade')}
+                    className="px-6 py-2 bg-[var(--color-brand-amber)] text-black font-bold text-sm tracking-widest hover:bg-[#f5b545] transition-colors"
+                  >
+                    {profile?.subscription_tier === 'pro' ? 'GO ELITE →' : 'UNLOCK ACCESS →'}
                   </button>
                 </div>
               </div>
@@ -288,7 +299,7 @@ export function DashboardPage() {
                 className="border border-[var(--color-brand-border-hi)] bg-[var(--color-brand-bg2)] p-4 hover:border-[var(--color-brand-green)] transition-colors flex flex-col md:flex-row md:items-center justify-between gap-4"
               >
                 <div className="flex-grow">
-                  <div className="text-[var(--color-brand-muted)] text-xs mb-1 uppercase">{saved.job_postings?.company_domain}</div>
+                  <div className="text-[var(--color-brand-muted)] text-xs mb-1 uppercase">{saved.job_postings?.company_domain?.replace(/\.placeholder$/i, '').split('.')[0]}</div>
                   <div className="text-[var(--color-brand-text)] font-semibold">{saved.job_postings?.title}</div>
                   <div className="flex items-center gap-3 mt-2 text-xs text-[var(--color-brand-muted)]">
                     <span className="flex items-center gap-1">
