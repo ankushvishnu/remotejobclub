@@ -10,6 +10,7 @@ import { PaymentSuccess } from './pages/PaymentSuccess';
 import { DashboardPage } from './pages/DashboardPage';
 import { PrivacyPage } from './pages/PrivacyPage';
 import { UpgradePage } from './pages/UpgradePage';
+import { TermsPage } from './pages/TermsPage';
 import { useAuth } from './hooks/useAuth';
 import { supabase } from './lib/supabase';
 
@@ -163,6 +164,7 @@ function AppShell() {
           <Route path="/terminal" element={<TerminalPage />} />
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/privacy" element={<PrivacyPage />} />
+          <Route path="/terms" element={<TermsPage />} />
           <Route path="/upgrade" element={<UpgradePage />} />
           <Route path="/dev/scanner" element={<DevScanner />} />
           <Route path="/payment/success" element={<PaymentSuccess />} />
@@ -172,9 +174,13 @@ function AppShell() {
       {/* Footer */}
       <footer className="w-full max-w-4xl mt-12 pt-6 border-t border-[var(--color-brand-border)] text-center text-xs text-[var(--color-brand-muted)] flex items-center justify-between flex-wrap gap-2">
         <p>© 2026 REMOTEJOB.CLUB // THE VAULT IS ACTIVE</p>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 flex-wrap">
           <Link to="/privacy" className="hover:text-[var(--color-brand-amber)] transition-colors">
-            PRIVACY & DISCLAIMER
+            PRIVACY
+          </Link>
+          <span className="opacity-30">|</span>
+          <Link to="/terms" className="hover:text-[var(--color-brand-amber)] transition-colors">
+            TERMS
           </Link>
           <span className="opacity-30">|</span>
           <p>
