@@ -42,7 +42,7 @@ export function TermsPage() {
           you agree to be bound by these Terms of Service. If you do not agree to these terms, please do not use the Service.
         </p>
         <p>
-          The Service is operated by an independent developer ("we", "us", "the Operator").
+          The Service is operated by an independent developer ("we", "us", "the Owner").
           These terms apply to all users, including free and paid tier members.
         </p>
       </Section>
@@ -157,7 +157,7 @@ export function TermsPage() {
       {/* Intellectual Property */}
       <Section icon={ShieldAlert} title="8. INTELLECTUAL PROPERTY">
         <p>
-          The Service's design, code, branding, and user interface are the intellectual property of the Operator.
+          The Service's design, code, branding, and user interface are the intellectual property of the Owner.
           Job listing content is sourced from third-party career pages and remains the property of the respective companies.
         </p>
         <p>
