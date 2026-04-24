@@ -99,25 +99,37 @@ Deno.serve(async (req) => {
 Return ONLY valid JSON: {"title": "job title", "keywords": ["skill1", "skill2", "skill3"]}.
 Resume: \n${resumeText}`
 
-    const orRes = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${openRouterKey}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        model: "google/gemma-4-31b-it:free",
-        max_tokens: 150,
-        messages: [{ role: "user", content: prompt }]
-      })
-    })
+    const PRIMARY_MODEL = "inclusionai/ling-2.6-1t:free"
+    const FALLBACK_MODEL = "meta-llama/llama-4-scout:free"
 
-    if (!orRes.ok) {
-      const errText = await orRes.text()
-      throw new Error(`OpenRouter API Error: ${errText}`)
+    // Helper: call OpenRouter with auto-retry on 429
+    async function callLLM(body: Record<string, any>) {
+      const makeRequest = (model: string) => fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${openRouterKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ ...body, model })
+      })
+
+      let res = await makeRequest(PRIMARY_MODEL)
+      if (res.status === 429) {
+        // Rate limited — try fallback model
+        res = await makeRequest(FALLBACK_MODEL)
+      }
+      if (!res.ok) {
+        const errText = await res.text()
+        // Check if it's still a rate limit
+        if (res.status === 429 || errText.includes('rate-limit')) {
+          throw new Error('RATE_LIMIT')
+        }
+        throw new Error(`AI_ERROR: ${errText}`)
+      }
+      return res.json()
     }
 
-    const orData = await orRes.json()
+    const orData = await callLLM({
+      max_tokens: 150,
+      messages: [{ role: "user", content: prompt }]
+    })
     if (orData.usage?.total_tokens) totalTokensUsed += orData.usage.total_tokens;
 
     let keywords = ["software", "engineer"]
@@ -169,26 +181,11 @@ Return ONLY valid JSON in this exact structure:
   ]
 }
 `
-    const curateRes = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${openRouterKey}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        model: "google/gemma-4-31b-it:free",
-        max_tokens: 350,
-        response_format: { type: "json_object" },
-        messages: [{ role: "user", content: curationPrompt }]
-      })
+    const curateData = await callLLM({
+      max_tokens: 350,
+      response_format: { type: "json_object" },
+      messages: [{ role: "user", content: curationPrompt }]
     })
-
-    if (!curateRes.ok) {
-      const errText = await curateRes.text()
-      throw new Error(`OpenRouter API Error during curation: ${errText}`)
-    }
-
-    const curateData = await curateRes.json()
     if (curateData.usage?.total_tokens) totalTokensUsed += curateData.usage.total_tokens;
 
     let curated: any[] = []
@@ -237,8 +234,23 @@ Return ONLY valid JSON in this exact structure:
 
   } catch (err: any) {
     console.error("match-resume error:", err)
-    return new Response(JSON.stringify({ error: err.message }), {
-      status: err.message.includes('reached your') ? 403 : 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    
+    let status = 500
+    let message = "Something went wrong. Please try again."
+    
+    if (err.message === 'RATE_LIMIT') {
+      status = 429
+      message = "Our AI models are experiencing high demand right now. Please wait a minute and try again. Your scan was not charged."
+    } else if (err.message.includes('reached your')) {
+      status = 403
+      message = err.message
+    } else if (err.message.includes('AI_ERROR')) {
+      status = 502
+      message = "Our AI service is temporarily unavailable. Please try again in a few minutes. Your scan was not charged."
+    }
+    
+    return new Response(JSON.stringify({ error: message }), {
+      status, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     })
   }
 })

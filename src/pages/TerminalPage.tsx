@@ -337,7 +337,7 @@ export function TerminalPage() {
                         <span className="text-[var(--color-brand-green)] text-xs border border-[var(--color-brand-green)] px-2 py-[2px] bg-[#1e2b1e]">
                           MATCH: {job.match_score}/10
                         </span>
-                        <span className="text-[var(--color-brand-muted)] text-xs">{job.company_domain}</span>
+                        <span className="text-[var(--color-brand-muted)] text-xs uppercase">{(job.company_domain || '').replace(/\.placeholder$/i, '').split('.')[0]}</span>
                       </div>
                       <h3 className="text-lg font-semibold text-[var(--color-brand-text)] mb-3 group-hover:text-[var(--color-brand-green)] transition-colors">
                         {job.title}
