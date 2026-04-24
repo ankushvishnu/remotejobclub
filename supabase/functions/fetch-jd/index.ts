@@ -39,23 +39,84 @@ serve(async (req) => {
 
     if (!job.url) throw new Error("Job missing URL")
 
-    // Fetch the URL
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
-    const res = await fetch(job.url, { signal: controller.signal });
-    clearTimeout(timeoutId);
+    const urlStr = job.url;
+    let html = "";
 
-    if (!res.ok) throw new Error("Failed to fetch JD from source")
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000);
+      
+      // Ashby
+      if (urlStr.includes('ashbyhq.com')) {
+        const parts = new URL(urlStr).pathname.split('/').filter(Boolean);
+        const company = parts[0];
+        const jobId = parts[1];
+        if (company) {
+          const res = await fetch(`https://api.ashbyhq.com/posting-api/job-board/${company}`, { signal: controller.signal });
+          const json = await res.json();
+          const target = json.jobs?.find((j: any) => j.id === jobId);
+          if (target && target.descriptionHtml) {
+            html = target.descriptionHtml;
+          }
+        }
+      } 
+      // Greenhouse
+      else if (urlStr.includes('boards.greenhouse.io')) {
+        const parts = new URL(urlStr).pathname.split('/').filter(Boolean);
+        const company = parts[0];
+        const jobId = parts[2];
+        if (company && jobId) {
+          const res = await fetch(`https://boards-api.greenhouse.io/v1/boards/${company}/jobs/${jobId}`, { signal: controller.signal });
+          const json = await res.json();
+          if (json.content) html = json.content;
+        }
+      }
+      // Lever
+      else if (urlStr.includes('jobs.lever.co')) {
+        const parts = new URL(urlStr).pathname.split('/').filter(Boolean);
+        const company = parts[0];
+        const jobId = parts[1];
+        if (company && jobId) {
+          const res = await fetch(`https://api.lever.co/v0/postings/${company}/${jobId}`, { signal: controller.signal });
+          const json = await res.json();
+          if (json.descriptionPlain) {
+            html = json.descriptionPlain + " " + (json.lists || []).map((l: any) => l.text).join(" ");
+          }
+        }
+      }
 
-    const html = await res.text();
-    // Basic HTML to Text extraction (strip scripts, styles, and tags)
-    const cleanText = html
+      // Fallback to raw HTML scraping if ATS API failed or unsupported ATS
+      if (!html) {
+        const res = await fetch(urlStr, { signal: controller.signal });
+        if (res.ok) {
+          html = await res.text();
+        }
+      }
+      clearTimeout(timeoutId);
+
+    } catch (e) {
+      console.warn("Failed to fetch JD from source:", e);
+    }
+
+    if (!html || html.includes("You need to enable JavaScript")) {
+      throw new Error("Could not extract description. Please visit the site directly.");
+    }
+
+    // Basic HTML to Text extraction
+    let cleanText = html
       .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
       .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '')
       .replace(/<[^>]+>/g, ' ')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&amp;/g, '&')
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'")
+      .replace(/&nbsp;/g, ' ')
+      .replace(/<[^>]+>/g, ' ') // Strip tags again in case decoding formed new ones
       .replace(/\s+/g, ' ')
       .trim()
-      .substring(0, 1500); // Take first 1500 chars as summary
+      .substring(0, 1500);
 
     if (cleanText.length > 100) {
       // Use service_role or regular user auth if policies allow update

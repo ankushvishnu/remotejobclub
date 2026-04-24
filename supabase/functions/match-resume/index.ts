@@ -172,23 +172,69 @@ Resume: \n${resumeText}`
       await Promise.all(jobsWithoutJD.map(async (job: any) => {
         try {
           const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 second timeout
-          const res = await fetch(job.url, { signal: controller.signal });
+          const timeoutId = setTimeout(() => controller.abort(), 3500); // 3.5 second timeout
+
+          const urlStr = job.url;
+          let html = "";
+          
+          // Ashby
+          if (urlStr.includes('ashbyhq.com')) {
+            const parts = new URL(urlStr).pathname.split('/').filter(Boolean);
+            if (parts[0]) {
+              const res = await fetch(`https://api.ashbyhq.com/posting-api/job-board/${parts[0]}`, { signal: controller.signal });
+              const json = await res.json();
+              const target = json.jobs?.find((j: any) => j.id === parts[1]);
+              if (target && target.descriptionHtml) html = target.descriptionHtml;
+            }
+          } 
+          // Greenhouse
+          else if (urlStr.includes('boards.greenhouse.io')) {
+            const parts = new URL(urlStr).pathname.split('/').filter(Boolean);
+            if (parts[0] && parts[2]) {
+              const res = await fetch(`https://boards-api.greenhouse.io/v1/boards/${parts[0]}/jobs/${parts[2]}`, { signal: controller.signal });
+              const json = await res.json();
+              if (json.content) html = json.content;
+            }
+          }
+          // Lever
+          else if (urlStr.includes('jobs.lever.co')) {
+            const parts = new URL(urlStr).pathname.split('/').filter(Boolean);
+            if (parts[0] && parts[1]) {
+              const res = await fetch(`https://api.lever.co/v0/postings/${parts[0]}/${parts[1]}`, { signal: controller.signal });
+              const json = await res.json();
+              if (json.descriptionPlain) {
+                html = json.descriptionPlain + " " + (json.lists || []).map((l: any) => l.text).join(" ");
+              }
+            }
+          }
+
+          // Fallback to raw HTML
+          if (!html) {
+            const res = await fetch(urlStr, { signal: controller.signal });
+            if (res.ok) html = await res.text();
+          }
           clearTimeout(timeoutId);
-          if (res.ok) {
-            const html = await res.text();
-            // Basic HTML to Text extraction (strip scripts, styles, and tags)
-            const cleanText = html
+
+          if (html && !html.includes("You need to enable JavaScript")) {
+            // Basic HTML to Text extraction
+            let cleanText = html
               .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
               .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '')
               .replace(/<[^>]+>/g, ' ')
+              .replace(/&lt;/g, '<')
+              .replace(/&gt;/g, '>')
+              .replace(/&amp;/g, '&')
+              .replace(/&quot;/g, '"')
+              .replace(/&#39;/g, "'")
+              .replace(/&nbsp;/g, ' ')
+              .replace(/<[^>]+>/g, ' ') // Strip tags again in case decoding formed new ones
               .replace(/\s+/g, ' ')
               .trim()
-              .substring(0, 1500); // Take first 1500 chars as summary
+              .substring(0, 1500);
               
             if (cleanText.length > 100) {
               job.description = cleanText; // Update local memory
-              // Update database asynchronously without awaiting it here
+              // Update database asynchronously
               await supabaseClient.from('job_postings').update({ description: cleanText }).eq('id', job.id);
             }
           }
