@@ -523,7 +523,7 @@ export function TerminalPage() {
                   <span className="text-[var(--color-brand-text)] font-bold">{totalScored || results.length}</span> scored.
                   {' '}For more roles, browse the{' '}
                   <button
-                    onClick={() => window.location.href = '/'}
+                    onClick={() => navigate('/')}
                     className="text-[var(--color-brand-amber)] underline hover:no-underline"
                   >
                     live job feed →
@@ -546,7 +546,7 @@ export function TerminalPage() {
                   {' '}<span className="text-[var(--color-brand-muted)]">More verified jobs await — upgrade to unlock them all.</span>
                 </p>
                 <button
-                  onClick={() => window.location.href = '/upgrade'}
+                  onClick={() => navigate('/upgrade')}
                   className="whitespace-nowrap px-5 py-2 bg-[var(--color-brand-amber)] text-black font-bold text-sm tracking-widest hover:bg-[#f5b545] transition-colors flex-shrink-0"
                 >
                   {userTier === 'pro' ? 'GO ELITE →' : 'GET PRO →'}
