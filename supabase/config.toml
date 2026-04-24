@@ -448,3 +448,14 @@ entrypoint = "./functions/ingest-ats/index.ts"
 # Specifies static files to be bundled with the function. Supports glob patterns.
 # For example, if you want to serve static HTML pages in your function:
 # static_files = [ "./functions/ingest-ats/*.html" ]
+
+[functions.fetch-jd]
+enabled = true
+verify_jwt = true
+import_map = "./functions/fetch-jd/deno.json"
+# Uncomment to specify a custom file path to the entrypoint.
+# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
+entrypoint = "./functions/fetch-jd/index.ts"
+# Specifies static files to be bundled with the function. Supports glob patterns.
+# For example, if you want to serve static HTML pages in your function:
+# static_files = [ "./functions/fetch-jd/*.html" ]

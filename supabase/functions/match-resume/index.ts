@@ -165,19 +165,51 @@ Resume: \n${resumeText}`
       })
     }
 
-    // Step 3: LLM curation pass over DB jobs
+    // Step 2.5: Lazy JD Fetching
+    // Find up to 5 jobs that have NO description, fetch them, extract text, and save.
+    const jobsWithoutJD = matchedJobs.filter((j: any) => !j.description).slice(0, 5);
+    if (jobsWithoutJD.length > 0) {
+      await Promise.all(jobsWithoutJD.map(async (job: any) => {
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 second timeout
+          const res = await fetch(job.url, { signal: controller.signal });
+          clearTimeout(timeoutId);
+          if (res.ok) {
+            const html = await res.text();
+            // Basic HTML to Text extraction (strip scripts, styles, and tags)
+            const cleanText = html
+              .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+              .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '')
+              .replace(/<[^>]+>/g, ' ')
+              .replace(/\s+/g, ' ')
+              .trim()
+              .substring(0, 1500); // Take first 1500 chars as summary
+              
+            if (cleanText.length > 100) {
+              job.description = cleanText; // Update local memory
+              // Update database asynchronously without awaiting it here
+              await supabaseClient.from('job_postings').update({ description: cleanText }).eq('id', job.id);
+            }
+          }
+        } catch (err) {
+          console.warn(`Failed lazy fetch for ${job.url}`);
+        }
+      }));
+    }
+
     const curationPrompt = `You are an elite tech recruiter AI.
 Candidate Keywords: ${keywords.join(", ")}
 Constraints: Role=${constraints?.role||'Any'}, Location=${constraints?.location||'Any'}, Tech=${constraints?.tech||'Any'}, Arrangement=${constraints?.arrangement||'Any'}
 
 Available DB Jobs:
-${JSON.stringify(matchedJobs.slice(0, 15).map((j: any) => ({ title: j.title, company: j.company_domain, tech: j.tech_stack, location: j.location, arrangement: j.work_arrangement })))}
+${JSON.stringify(matchedJobs.slice(0, 15).map((j: any) => ({ id: j.id, title: j.title, company: j.company_domain, tech: j.tech_stack, location: j.location, arrangement: j.work_arrangement, snippet: j.description ? j.description.substring(0, 300) : '' })))}
 
 Score matching jobs for this candidate from 1 to 10 based on exact skills match. Provide exactly 2 sentences of 'curation_notes'.
 Return ONLY valid JSON in this exact structure:
 {
   "matches": [
-    { "title": "job_title", "company_domain": "company", "match_score": 9.5, "curation_notes": "notes here" }
+    { "id": "job_id_here", "match_score": 9.5, "curation_notes": "notes here" }
   ]
 }
 `
@@ -202,7 +234,7 @@ Return ONLY valid JSON in this exact structure:
     // Build matches and deduplicate by job id to prevent duplicate React keys
     const seen = new Set<string>()
     const finalMatches = curated.map((c: any) => {
-      const jobBase = matchedJobs.find((j: any) => j.title === c.title || j.company_domain === c.company_domain) || matchedJobs[0]
+      const jobBase = matchedJobs.find((j: any) => j.id === c.id) || matchedJobs[0]
       return {
         ...jobBase,
         match_score: c.match_score || 8.0,

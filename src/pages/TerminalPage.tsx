@@ -184,6 +184,35 @@ export function TerminalPage() {
     }
   };
 
+  const [fetchingJdId, setFetchingJdId] = useState<string | null>(null);
+
+  const handleFetchJd = async (jobId: string) => {
+    setFetchingJdId(jobId);
+    try {
+      const session = await supabase.auth.getSession();
+      const token = session.data.session?.access_token;
+      
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/fetch-jd`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({ job_id: jobId })
+      });
+      
+      if (response.ok) {
+        const { description } = await response.json();
+        if (description && results) {
+          setResults(results.map((j: any) => j.id === jobId ? { ...j, description } : j));
+        }
+      }
+    } catch (err) {
+      console.error(err);
+    }
+    setFetchingJdId(null);
+  };
+
   if (loading) return <div className="text-center p-8">Checking clearance...</div>;
 
   return (
@@ -342,7 +371,19 @@ export function TerminalPage() {
                       <h3 className="text-lg font-semibold text-[var(--color-brand-text)] mb-3 group-hover:text-[var(--color-brand-green)] transition-colors">
                         {job.title}
                       </h3>
-                      <JobDescription text={job.description} />
+                      {job.description ? (
+                        <div className="text-sm text-[var(--color-brand-muted)] line-clamp-3 leading-relaxed mb-4">
+                          {job.description}
+                        </div>
+                      ) : (
+                        <button 
+                          onClick={() => handleFetchJd(job.id)}
+                          disabled={fetchingJdId === job.id}
+                          className="mb-4 text-xs text-[var(--color-brand-green)] border border-[var(--color-brand-green)] px-3 py-1 bg-[#1e2b1e] hover:bg-[var(--color-brand-green)] hover:text-black transition-colors"
+                        >
+                          {fetchingJdId === job.id ? 'LOADING DESCRIPTION...' : 'LOAD DESCRIPTION'}
+                        </button>
+                      )}
                       
                       <div className="bg-[var(--color-brand-bg)] border-l-2 border-[var(--color-brand-amber-dim)] p-3 pl-4 relative">
                         <div className="absolute top-3 left-[-11px] bg-[var(--color-brand-bg)]">

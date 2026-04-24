@@ -79,6 +79,35 @@ export function HomePage() {
     setLoading(false);
   };
 
+  const [fetchingJdId, setFetchingJdId] = useState<string | null>(null);
+
+  const handleFetchJd = async (jobId: string) => {
+    setFetchingJdId(jobId);
+    try {
+      const session = await supabase.auth.getSession();
+      const token = session.data.session?.access_token;
+      
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/fetch-jd`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({ job_id: jobId })
+      });
+      
+      if (response.ok) {
+        const { description } = await response.json();
+        if (description) {
+          setJobs(jobs.map(j => j.id === jobId ? { ...j, description } : j));
+        }
+      }
+    } catch (err) {
+      console.error(err);
+    }
+    setFetchingJdId(null);
+  };
+
   const filteredJobs = jobs.filter((j: any) => {
     if (filterTech && !j.title?.toLowerCase().includes(filterTech.toLowerCase()) && !j.description?.toLowerCase().includes(filterTech.toLowerCase())) return false;
     if (filterLocation && !j.location?.toLowerCase().includes(filterLocation.toLowerCase())) return false;
@@ -191,6 +220,19 @@ export function HomePage() {
                       <span className="border border-[var(--color-brand-border-hi)] px-2 bg-[var(--color-brand-bg2)]">{job.ats_source}</span>
                       <span className="text-[var(--color-brand-amber)]">{new Date(job.created_at).toLocaleDateString()}</span>
                     </div>
+                    {job.description ? (
+                      <div className="mt-3 text-sm text-[var(--color-brand-muted)] line-clamp-3 leading-relaxed border-l-2 border-[var(--color-brand-amber-dim)] pl-3">
+                        {job.description}
+                      </div>
+                    ) : (
+                      <button 
+                        onClick={() => handleFetchJd(job.id)}
+                        disabled={fetchingJdId === job.id}
+                        className="mt-3 text-xs text-[var(--color-brand-amber)] border border-[var(--color-brand-amber-dim)] px-3 py-1 hover:bg-[var(--color-brand-amber-dim)] hover:text-black transition-colors"
+                      >
+                        {fetchingJdId === job.id ? 'LOADING DESCRIPTION...' : 'LOAD DESCRIPTION'}
+                      </button>
+                    )}
                   </div>
                   <div>
                     <button 
