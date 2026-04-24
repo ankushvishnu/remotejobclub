@@ -112,12 +112,16 @@ Resume: \n${resumeText}`
 
       let res = await makeRequest(PRIMARY_MODEL)
       if (res.status === 429) {
-        // Rate limited — try fallback model
+        // Rate limited on primary — try fallback model immediately
         res = await makeRequest(FALLBACK_MODEL)
+      }
+      // If fallback also rate-limits, wait 10s and try primary once more
+      if (res.status === 429) {
+        await new Promise(resolve => setTimeout(resolve, 10000))
+        res = await makeRequest(PRIMARY_MODEL)
       }
       if (!res.ok) {
         const errText = await res.text()
-        // Check if it's still a rate limit
         if (res.status === 429 || errText.includes('rate-limit')) {
           throw new Error('RATE_LIMIT')
         }
@@ -145,13 +149,23 @@ Resume: \n${resumeText}`
       console.warn("Failed to parse OpenRouter response", e)
     }
 
-    // Step 2: Query DB for ACTIVE jobs
-    const { data: dbJobs, error: dbError } = await supabaseClient
+    // Step 2: Query DB for ACTIVE jobs — ordered newest-first for diversity, large pool
+    // Tier determines how deep the pool we query and how many matches we return
+    const poolSize = tier === 'elite' ? 150 : tier === 'pro' ? 100 : 60
+
+    let jobQuery = supabaseClient
       .from('job_postings')
       .select('*')
       .eq('status', 'ACTIVE')
-      .ilike('title', `%${constraints?.role || ''}%`)
-      .limit(30)
+      .order('created_at', { ascending: false })
+      .limit(poolSize)
+
+    // Only filter by role if a non-empty role constraint was provided
+    if (constraints?.role && constraints.role.trim()) {
+      jobQuery = jobQuery.ilike('title', `%${constraints.role.trim()}%`)
+    }
+
+    const { data: dbJobs, error: dbError } = await jobQuery
 
     if (dbError) throw dbError
 
@@ -244,24 +258,33 @@ Resume: \n${resumeText}`
       }));
     }
 
-    const curationPrompt = `You are an elite tech recruiter AI.
+    // How many jobs to feed the LLM — must fit in context window
+    // Keep batch small: each entry ~80 tokens input + ~60 tokens output = ~140 tokens/job
+    // At 4000 max_tokens output, we can safely get ~40 entries back
+    const llmBatchSize = tier === 'elite' ? 40 : tier === 'pro' ? 30 : 20
+
+    const curationPrompt = `You are a job match analyst for remote roles.
+
+Score each job below 0-100 for this candidate.
 Candidate Keywords: ${keywords.join(", ")}
-Constraints: Role=${constraints?.role||'Any'}, Location=${constraints?.location||'Any'}, Tech=${constraints?.tech||'Any'}, Arrangement=${constraints?.arrangement||'Any'}
+Constraints: Role=${constraints?.role||'Any'}, Location=${constraints?.location||'Any'}, Tech=${constraints?.tech||'Any'}
 
-Available DB Jobs:
-${JSON.stringify(matchedJobs.slice(0, 15).map((j: any) => ({ id: j.id, title: j.title, company: j.company_domain, tech: j.tech_stack, location: j.location, arrangement: j.work_arrangement, snippet: j.description ? j.description.substring(0, 300) : '' })))}
+Jobs to score:
+${matchedJobs.slice(0, llmBatchSize).map((j: any, i: number) =>
+  `[${i}] id:${j.id} title:"${j.title}" company:${j.company_domain} loc:${j.location||'Remote'} snippet:"${(j.description||'').substring(0,150)}"`
+).join('\n')}
 
-Score matching jobs for this candidate from 1 to 10 based on exact skills match. Provide exactly 2 sentences of 'curation_notes'.
-Return ONLY valid JSON in this exact structure:
-{
-  "matches": [
-    { "id": "job_id_here", "match_score": 9.5, "curation_notes": "notes here" }
-  ]
-}
+Return ONLY compact JSON - no explanation, no markdown:
+{"matches":[{"id":"...","score":85,"why":"one sentence reason","conf":"high"}]}
+
+Rules:
+- Include ALL jobs with score >= 25 (be generous, include partial matches)
+- conf must be: "high" (score>=75), "medium" (50-74), "low" (<50)
+- Order by score descending
+- If no jobs score above 25, include the top 5 by best fit anyway
 `
     const curateData = await callLLM({
-      max_tokens: 350,
-      response_format: { type: "json_object" },
+      max_tokens: 4000,
       messages: [{ role: "user", content: curationPrompt }]
     })
     if (curateData.usage?.total_tokens) totalTokensUsed += curateData.usage.total_tokens;
@@ -269,32 +292,61 @@ Return ONLY valid JSON in this exact structure:
     let curated: any[] = []
     try {
       const content = curateData.choices?.[0]?.message?.content || "{}"
-      const jsonMatch = content.match(/\{[\s\S]*\}/)
-      const cleaned = jsonMatch ? jsonMatch[0] : content.replace(/```json/g, '').replace(/```/g, '').trim()
+      // Strip markdown code fences if present
+      const stripped = content.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim()
+      // Extract the JSON object
+      const jsonMatch = stripped.match(/\{[\s\S]*\}/)
+      const cleaned = jsonMatch ? jsonMatch[0] : stripped
       const parsed = JSON.parse(cleaned)
       curated = parsed.matches || []
+      console.log(`LLM returned ${curated.length} matches from ${llmBatchSize} jobs`)
     } catch(e) {
-      console.warn("Failed to parse curation", e)
+      console.warn("Failed to parse curation response:", e)
+      console.warn("Raw LLM content:", curateData.choices?.[0]?.message?.content?.substring(0, 500))
     }
 
     // Build matches and deduplicate by job id to prevent duplicate React keys
     const seen = new Set<string>()
-    const finalMatches = curated.map((c: any) => {
-      const jobBase = matchedJobs.find((j: any) => j.id === c.id) || matchedJobs[0]
+    let finalMatches = curated.map((c: any) => {
+      const jobBase = matchedJobs.find((j: any) => j.id === c.id)
+      if (!jobBase) return null // skip if LLM hallucinated an ID
+      const rawScore = c.score ?? c.match_score ?? 50
+      const normalizedScore = rawScore <= 10 ? rawScore * 10 : rawScore
       return {
         ...jobBase,
-        match_score: c.match_score || 8.0,
-        curation_notes: c.curation_notes || "Fits the specified constraints cleanly."
+        match_score: normalizedScore,
+        score: normalizedScore,
+        matched_skills: c.matched_skills || [],
+        missing_skills: c.missing_skills || [],
+        why: c.why || '',
+        apply_confidence: c.conf || c.apply_confidence || (normalizedScore >= 75 ? 'high' : normalizedScore >= 50 ? 'medium' : 'low'),
+        curation_notes: c.why || 'Fits the specified constraints.'
       }
     }).filter((job: any) => {
       if (!job || seen.has(job.id)) return false
       seen.add(job.id)
       return true
     })
+
+    // Tier-based result caps — separate from apply-click limits
+    // Free: 5  |  Pro: 15  |  Elite: 30
+    const resultCount = tier === 'elite' ? 30 : tier === 'pro' ? 15 : 5;
+
+    // FALLBACK: if LLM returned nothing (parse error / all below threshold), return top jobs from pool directly
+    if (finalMatches.length === 0 && matchedJobs.length > 0) {
+      console.warn('LLM curation returned 0 results — using fallback: top jobs from pool')
+      finalMatches = matchedJobs.slice(0, resultCount).map((j: any) => ({
+        ...j,
+        match_score: 60,
+        score: 60,
+        matched_skills: [],
+        missing_skills: [],
+        why: 'Keyword match from resume analysis.',
+        apply_confidence: 'medium',
+        curation_notes: 'Keyword match from resume analysis.'
+      }))
+    }
     
-    // Truncate based on tier limits for results (just 10 normally anyway, but let's just show top 5-10)
-    // The requirement was "Free tier will get 2 matches only...". This meant 2 reviews, not 2 jobs in the result, but let's limit the result array just to be safe.
-    const resultCount = tier === 'free' ? 5 : 10;
     const limitedMatches = finalMatches.slice(0, resultCount);
 
     // Charge the quota since it succeeded
@@ -306,7 +358,7 @@ Return ONLY valid JSON in this exact structure:
       })
       .eq('id', user.id)
 
-    return new Response(JSON.stringify({ matches: limitedMatches }), {
+    return new Response(JSON.stringify({ matches: limitedMatches, tier, total_scored: finalMatches.length }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     })
 
@@ -318,7 +370,7 @@ Return ONLY valid JSON in this exact structure:
     
     if (err.message === 'RATE_LIMIT') {
       status = 429
-      message = "Our AI models are experiencing high demand right now. Please wait a minute and try again. Your scan was not charged."
+      message = "Resume scan queued — our AI models are at capacity right now. Please wait ~2 minutes and try again. Your scan was not charged."
     } else if (err.message.includes('reached your')) {
       status = 403
       message = err.message

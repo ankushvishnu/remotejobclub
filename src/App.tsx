@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { HomePage } from './pages/HomePage';
 import { TerminalPage } from './pages/TerminalPage';
 import { AuthPage } from './pages/AuthPage';
-import { DevScanner } from './pages/DevScanner';
+
 import { PaymentSuccess } from './pages/PaymentSuccess';
 import { DashboardPage } from './pages/DashboardPage';
 import { PrivacyPage } from './pages/PrivacyPage';
@@ -78,12 +78,12 @@ function AppShell() {
       <header className="w-full max-w-4xl flex items-center justify-between mb-4 border-b border-[var(--color-brand-border)] pb-4">
         <Link
           to="/"
-          className="flex items-center gap-3 hover:opacity-80 transition-opacity"
+          className="flex items-center gap-2 sm:gap-3 hover:opacity-80 transition-opacity min-w-0"
         >
           <Terminal className="text-[var(--color-brand-amber)] w-5 h-5 flex-shrink-0" />
-          <h1 className="text-base md:text-lg font-semibold tracking-tight text-[var(--color-brand-text)] whitespace-nowrap">
+          <h1 className="text-base md:text-lg font-semibold tracking-tight text-[var(--color-brand-text)] truncate">
             REMOTEJOB.CLUB{' '}
-            <span className="text-[var(--color-brand-muted)] font-normal">// TERMINAL</span>
+            <span className="text-[var(--color-brand-muted)] font-normal hidden sm:inline">// TERMINAL</span>
           </h1>
         </Link>
 
@@ -166,7 +166,7 @@ function AppShell() {
           <Route path="/privacy" element={<PrivacyPage />} />
           <Route path="/terms" element={<TermsPage />} />
           <Route path="/upgrade" element={<UpgradePage />} />
-          <Route path="/dev/scanner" element={<DevScanner />} />
+
           <Route path="/payment/success" element={<PaymentSuccess />} />
         </Routes>
       </main>
@@ -183,12 +183,7 @@ function AppShell() {
             TERMS
           </Link>
           <span className="opacity-30">|</span>
-          <p>
-            V_1.0.5.BETA ·{' '}
-            <Link to="/dev/scanner" className="hover:text-[var(--color-brand-amber)]">
-              DEV_ACCESS
-            </Link>
-          </p>
+          <p>V_1.0.5.BETA</p>
         </div>
       </footer>
     </div>

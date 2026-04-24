@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { Terminal, ShieldAlert, Briefcase, Search, CheckCircle2 } from 'lucide-react';
+import { Terminal, ShieldAlert, Briefcase, Search, CheckCircle2, AlertTriangle, Clock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
@@ -22,6 +22,18 @@ const TypewriterText = ({ text, className = '', speed = 30 }: { text: string, cl
   return <span className={className}>{displayedText}<span className="animate-pulse">_</span></span>;
 };
 
+/** Returns "X days ago", "Today", or "Yesterday" */
+function timeAgo(dateStr: string): { label: string; daysOld: number } {
+  const posted = new Date(dateStr);
+  const now = new Date();
+  const diffMs = now.getTime() - posted.getTime();
+  const daysOld = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  
+  if (daysOld === 0) return { label: 'Today', daysOld };
+  if (daysOld === 1) return { label: 'Yesterday', daysOld };
+  return { label: `${daysOld} days ago`, daysOld };
+}
+
 export function HomePage() {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -32,7 +44,7 @@ export function HomePage() {
   const [filterTech, setFilterTech] = useState('');
   const [filterLocation, setFilterLocation] = useState('');
 
-  const [tierLimit, setTierLimit] = useState(15); // Default to Free tier limit
+  const [tierLimit, setTierLimit] = useState(15);
 
   useEffect(() => {
     fetchJobs();
@@ -43,7 +55,6 @@ export function HomePage() {
     let limit = 15; // Free default
 
     if (user) {
-      // Get user tier
       const { data: profile } = await supabase
         .from('profiles')
         .select('subscription_tier')
@@ -57,8 +68,7 @@ export function HomePage() {
     }
     setTierLimit(limit);
 
-    // Fetch from vw_healthy_jobs which has anti-spam built in
-    // Fallback to job_postings if the view doesn't exist yet
+    // Fetch from vw_healthy_jobs — only recent, active listings
     let { data, error } = await supabase
       .from('vw_healthy_jobs')
       .select('*')
@@ -66,7 +76,6 @@ export function HomePage() {
       .limit(limit);
     
     if (error || !data) {
-      // Fallback: view might not exist yet
       const fallback = await supabase
         .from('job_postings')
         .select('*')
@@ -141,6 +150,7 @@ export function HomePage() {
       animate={{ opacity: 1, y: 0 }}
       className="w-full flex-grow flex flex-col gap-12 py-4"
     >
+      {/* Hero */}
       <div className="text-center">
         <h2 className="text-3xl md:text-5xl font-bold text-[var(--color-brand-text)] mb-4 tracking-tight">
           SIGNAL OVER NOISE.
@@ -150,8 +160,14 @@ export function HomePage() {
             <TypewriterText text="We find the hidden remote jobs. You get the interview." speed={50} />
           </p>
         </div>
+        {/* Apply scarcity headline */}
+        <p className="mt-6 text-[var(--color-brand-muted)] text-sm max-w-xl mx-auto leading-relaxed border border-[var(--color-brand-border)] bg-[var(--color-brand-bg2)] px-5 py-3 inline-block">
+          We limit who can apply to each job.{' '}
+          <span className="text-[var(--color-brand-text)] font-semibold">Fewer competitors. Better chances.</span>
+        </p>
       </div>
 
+      {/* Cards row */}
       <div className="grid md:grid-cols-2 gap-8 w-full mt-4">
         <div className="border border-[var(--color-brand-border-hi)] bg-[var(--color-brand-bg2)] p-6 hover:border-[var(--color-brand-amber)] transition-colors">
           <h3 className="text-[var(--color-brand-amber)] font-semibold text-lg mb-3 flex items-center gap-2">
@@ -160,11 +176,15 @@ export function HomePage() {
           <p className="text-[var(--color-brand-muted)] text-sm leading-relaxed">
             I applied to 200+ remote jobs and got ghosted by every giant job board. So I built this. The Vault only surfaces verified, active roles from companies that are actually hiring — not ghost jobs, not expired listings, not recruiter spam.
           </p>
+          <p className="mt-3 text-xs text-[var(--color-brand-muted)] border-t border-[var(--color-brand-border)] pt-3">
+            2,000+ remote jobs · Updated daily · Direct apply links · No aggregator noise
+          </p>
         </div>
         
         <div className="w-full border border-[var(--color-brand-green)] bg-[#1e2b1e] p-6 text-center relative flex flex-col justify-center">
           <h3 className="text-[var(--color-brand-text)] font-semibold mb-2">ACCESS THE INNER VAULT</h3>
-          <p className="text-[#8cdb8b] text-sm mb-6">Drop your resume, bypassing the generic crowd.</p>
+          <p className="text-[#8cdb8b] text-sm mb-2">Drop your resume, bypassing the generic crowd.</p>
+          <p className="text-xs text-[var(--color-brand-muted)] mb-6">No credit card required</p>
           
           <button 
             onClick={() => navigate(user ? '/terminal' : '/auth')}
@@ -176,6 +196,7 @@ export function HomePage() {
         </div>
       </div>
 
+      {/* Live Feed */}
       <div className="w-full border border-[var(--color-brand-border-hi)] bg-[var(--color-brand-bg2)] overflow-hidden">
         <div className="bg-[var(--color-brand-bg)] border-b border-[var(--color-brand-border-hi)] p-4 flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2 text-[var(--color-brand-amber)] font-semibold">
@@ -210,40 +231,58 @@ export function HomePage() {
             <div className="p-8 text-center text-[var(--color-brand-muted)]">No active verified jobs matching those filters.</div>
           ) : (
             <div className="flex flex-col">
-              {(isFeedExpanded ? filteredJobs : filteredJobs.slice(0, 5)).map((job, idx) => (
-                <div key={job.id || idx} className="border-b border-[var(--color-brand-border)] p-4 hover:bg-[var(--color-brand-bg)] transition-colors flex flex-col md:flex-row md:items-center justify-between gap-4">
-                  <div className="flex-grow">
-                    <div className="text-[var(--color-brand-muted)] text-xs mb-1 uppercase tracking-wider">{(job.company_domain || '').replace(/\.placeholder$/i, '').split('.')[0]}</div>
-                    <div className="text-[var(--color-brand-text)] font-semibold text-lg">{job.title}</div>
-                    <div className="flex items-center gap-3 mt-2 text-xs text-[var(--color-brand-muted)]">
-                      <span className="flex items-center gap-1"><CheckCircle2 className="w-3 h-3 text-[var(--color-brand-green)]"/> {job.location || 'Remote'}</span>
-                      <span className="border border-[var(--color-brand-border-hi)] px-2 bg-[var(--color-brand-bg2)]">{job.ats_source}</span>
-                      <span className="text-[var(--color-brand-amber)]">{new Date(job.created_at).toLocaleDateString()}</span>
-                    </div>
-                    {job.description ? (
-                      <div className="mt-3 text-sm text-[var(--color-brand-muted)] line-clamp-3 leading-relaxed border-l-2 border-[var(--color-brand-amber-dim)] pl-3">
-                        {job.description}
+              {(isFeedExpanded ? filteredJobs : filteredJobs.slice(0, 5)).map((job, idx) => {
+                const { label: postedLabel, daysOld } = timeAgo(job.created_at);
+                const isStale = daysOld > 21;
+
+                return (
+                  <div 
+                    key={job.id || idx} 
+                    className={`border-b border-[var(--color-brand-border)] p-4 hover:bg-[var(--color-brand-bg)] transition-colors flex flex-col md:flex-row md:items-center justify-between gap-4 ${isStale ? 'opacity-50' : ''}`}
+                  >
+                    <div className="flex-grow">
+                      <div className="text-[var(--color-brand-muted)] text-xs mb-1 uppercase tracking-wider">{(job.company_domain || '').replace(/\.placeholder$/i, '').split('.')[0]}</div>
+                      <div className={`font-semibold text-lg ${isStale ? 'text-[var(--color-brand-muted)]' : 'text-[var(--color-brand-text)]'}`}>{job.title}</div>
+                      <div className="flex items-center gap-3 mt-2 text-xs text-[var(--color-brand-muted)] flex-wrap">
+                        <span className="flex items-center gap-1"><CheckCircle2 className="w-3 h-3 text-[var(--color-brand-green)]"/> {job.location || 'Remote'}</span>
+                        <span className="border border-[var(--color-brand-border-hi)] px-2 bg-[var(--color-brand-bg2)]">{job.ats_source}</span>
+                        {/* Posted X days ago */}
+                        <span className={`flex items-center gap-1 ${isStale ? 'text-[var(--color-brand-red)]' : 'text-[var(--color-brand-amber)]'}`}>
+                          <Clock className="w-3 h-3" /> {postedLabel}
+                        </span>
+                        {/* Stale warning */}
+                        {isStale && (
+                          <span className="flex items-center gap-1 text-[var(--color-brand-red)] border border-[var(--color-brand-red)]/40 px-2 py-0.5 text-[10px]">
+                            <AlertTriangle className="w-3 h-3" /> May already be filled
+                          </span>
+                        )}
                       </div>
-                    ) : (
+                      {job.description ? (
+                        <div className="mt-3 text-sm text-[var(--color-brand-muted)] line-clamp-3 leading-relaxed border-l-2 border-[var(--color-brand-amber-dim)] pl-3">
+                          {job.description}
+                        </div>
+                      ) : (
+                        <button 
+                          onClick={() => handleFetchJd(job.id)}
+                          disabled={fetchingJdId === job.id}
+                          className="mt-3 text-xs text-[var(--color-brand-amber)] border border-[var(--color-brand-amber-dim)] px-3 py-1 hover:bg-[var(--color-brand-amber-dim)] hover:text-black transition-colors"
+                        >
+                          {fetchingJdId === job.id ? 'LOADING DESCRIPTION...' : 'LOAD DESCRIPTION'}
+                        </button>
+                      )}
+                    </div>
+                    <div>
                       <button 
-                        onClick={() => handleFetchJd(job.id)}
-                        disabled={fetchingJdId === job.id}
-                        className="mt-3 text-xs text-[var(--color-brand-amber)] border border-[var(--color-brand-amber-dim)] px-3 py-1 hover:bg-[var(--color-brand-amber-dim)] hover:text-black transition-colors"
+                        onClick={() => handleApplyClick(job.id)}
+                        disabled={isStale}
+                        className={`whitespace-nowrap px-4 py-2 border text-sm font-medium transition-colors ${isStale ? 'border-[var(--color-brand-border)] text-[var(--color-brand-muted)] cursor-not-allowed' : 'border-[var(--color-brand-green)] text-[var(--color-brand-green)] hover:bg-[var(--color-brand-green)] hover:text-black'}`}
                       >
-                        {fetchingJdId === job.id ? 'LOADING DESCRIPTION...' : 'LOAD DESCRIPTION'}
+                        {isStale ? 'POSSIBLY FILLED' : 'DIRECT APPLY ↗'}
                       </button>
-                    )}
+                    </div>
                   </div>
-                  <div>
-                    <button 
-                      onClick={() => handleApplyClick(job.id)}
-                      className="whitespace-nowrap px-4 py-2 border border-[var(--color-brand-green)] text-[var(--color-brand-green)] hover:bg-[var(--color-brand-green)] hover:text-black transition-colors text-sm font-medium"
-                    >
-                      DIRECT APPLY ↗
-                    </button>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
 
               {filteredJobs.length > 5 && (
                 <button 

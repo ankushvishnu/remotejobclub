@@ -59,20 +59,32 @@ export function TerminalPage() {
   // Track which jobs user has already saved
   const [savedJobIds, setSavedJobIds] = useState<Set<string>>(new Set());
   const [savingJobId, setSavingJobId] = useState<string | null>(null);
+  const [userTier, setUserTier] = useState<string>('free');
+  const [totalScored, setTotalScored] = useState<number>(0);
 
   useEffect(() => {
     if (!loading && !user) navigate('/auth');
   }, [user, loading, navigate]);
 
-  // Load already-saved job IDs on mount
+  // Load already-saved job IDs and user tier on mount
   useEffect(() => {
     if (!user) return;
+    // Saved jobs
     supabase
       .from('saved_jobs')
       .select('job_posting_id')
       .eq('user_id', user.id)
       .then(({ data }) => {
         if (data) setSavedJobIds(new Set(data.map((r: any) => r.job_posting_id)));
+      });
+    // User tier
+    supabase
+      .from('profiles')
+      .select('subscription_tier')
+      .eq('id', user.id)
+      .single()
+      .then(({ data }) => {
+        if (data?.subscription_tier) setUserTier(data.subscription_tier);
       });
   }, [user]);
 
@@ -174,6 +186,8 @@ export function TerminalPage() {
       setTimeout(() => {
         setIsScanning(false);
         setResults(data.matches || []);
+        if (data.tier) setUserTier(data.tier);
+        if (typeof data.total_scored === 'number') setTotalScored(data.total_scored);
       }, 500);
 
     } catch (err: any) {
@@ -335,7 +349,7 @@ export function TerminalPage() {
         <motion.div 
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="w-full flex flex-col gap-6"
+          className="w-full flex flex-col gap-6 pb-28"
         >
           <div className="flex items-center justify-between border-b border-[var(--color-brand-border-hi)] pb-4 mb-4">
             <div className="flex items-center gap-2">
@@ -352,100 +366,194 @@ export function TerminalPage() {
 
           <div className="grid gap-4">
             <AnimatePresence>
-              {results.map((job: any, index: number) => (
-                <motion.div 
-                  key={job.id}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: index * 0.15 }}
-                  className="group bg-[var(--color-brand-bg2)] border border-[var(--color-brand-border-hi)] p-6 hover:border-[var(--color-brand-green)] transition-all shadow-sm"
-                >
-                  <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
-                    <div className="flex-grow">
-                      <div className="flex items-center gap-3 mb-2">
-                        <span className="text-[var(--color-brand-green)] text-xs border border-[var(--color-brand-green)] px-2 py-[2px] bg-[#1e2b1e]">
-                          MATCH: {job.match_score}/10
-                        </span>
-                        <span className="text-[var(--color-brand-muted)] text-xs uppercase">{(job.company_domain || '').replace(/\.placeholder$/i, '').split('.')[0]}</span>
-                      </div>
-                      <h3 className="text-lg font-semibold text-[var(--color-brand-text)] mb-3 group-hover:text-[var(--color-brand-green)] transition-colors">
-                        {job.title}
-                      </h3>
-                      {job.description ? (
-                        <div className="text-sm text-[var(--color-brand-muted)] line-clamp-3 leading-relaxed mb-4">
-                          {job.description}
-                        </div>
-                      ) : (
-                        <button 
-                          onClick={() => handleFetchJd(job.id)}
-                          disabled={fetchingJdId === job.id}
-                          className="mb-4 text-xs text-[var(--color-brand-green)] border border-[var(--color-brand-green)] px-3 py-1 bg-[#1e2b1e] hover:bg-[var(--color-brand-green)] hover:text-black transition-colors"
-                        >
-                          {fetchingJdId === job.id ? 'LOADING DESCRIPTION...' : 'LOAD DESCRIPTION'}
-                        </button>
-                      )}
-                      
-                      <div className="bg-[var(--color-brand-bg)] border-l-2 border-[var(--color-brand-amber-dim)] p-3 pl-4 relative">
-                        <div className="absolute top-3 left-[-11px] bg-[var(--color-brand-bg)]">
-                          <Briefcase className="w-4 h-4 text-[var(--color-brand-amber-dim)]" />
-                        </div>
-                        <p className="text-xs text-[var(--color-brand-amber)] font-medium mb-1 uppercase tracking-wider">AI Curation Notes:</p>
-                        <p className="text-sm text-[var(--color-brand-text)] opacity-90">{job.curation_notes}</p>
-                      </div>
-                    </div>
+              {results.map((job: any, index: number) => {
+                // Normalise score: could be 0-10 or 0-100
+                const rawScore = job.match_score ?? job.score ?? 0;
+                const pct = rawScore <= 10 ? Math.round(rawScore * 10) : Math.round(rawScore);
 
-                    <div className="flex flex-col items-end justify-between min-w-[140px] border-t border-[var(--color-brand-border)] pt-4 md:border-t-0 md:pt-0 gap-3">
-                      <div className="text-right text-xs text-[var(--color-brand-muted)] mb-2">
-                        <div className="flex items-center gap-1 justify-end text-[var(--color-brand-green)]">
-                          <CheckCircle2 className="w-4 h-4" /> VERIFIED
+                // apply_confidence colouring
+                const confidence = (job.apply_confidence || '').toLowerCase();
+                const confidenceColor =
+                  confidence === 'high' ? 'text-[var(--color-brand-green)] border-[var(--color-brand-green)]' :
+                  confidence === 'medium' ? 'text-[var(--color-brand-amber)] border-[var(--color-brand-amber)]' :
+                  confidence === 'low' ? 'text-[var(--color-brand-muted)] border-[var(--color-brand-border-hi)]' : '';
+
+                // "why this fits you"
+                const why = job.why || job.curation_notes || '';
+
+                return (
+                  <motion.div 
+                    key={job.id}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.15 }}
+                    className="group bg-[var(--color-brand-bg2)] border border-[var(--color-brand-border-hi)] p-6 hover:border-[var(--color-brand-green)] transition-all shadow-sm"
+                  >
+                    <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+                      <div className="flex-grow">
+                        <div className="flex items-center gap-3 mb-2 flex-wrap">
+                          {/* Match % badge */}
+                          <span className="text-[var(--color-brand-green)] text-xs border border-[var(--color-brand-green)] px-2 py-[2px] bg-[#1e2b1e] font-bold">
+                            {pct}% MATCH
+                          </span>
+                          {/* apply_confidence badge */}
+                          {confidence && (
+                            <span className={`text-[10px] border px-2 py-[2px] uppercase tracking-wider font-semibold ${confidenceColor}`}>
+                              {confidence === 'high' ? '✓ HIGH CONFIDENCE' : confidence === 'medium' ? '~ MED CONFIDENCE' : '↓ LOW CONFIDENCE'}
+                            </span>
+                          )}
+                          <span className="text-[var(--color-brand-muted)] text-xs uppercase">{(job.company_domain || '').replace(/\.placeholder$/i, '').split('.')[0]}</span>
                         </div>
-                      </div>
-
-                      <button 
-                        onClick={async () => {
-                          if (!user) return;
-                          const { data, error } = await supabase.rpc('record_job_view', { p_job_id: job.id });
-                          if (error) {
-                            alert("An error occurred while tracking your application.");
-                            return;
-                          }
-                          if (!data.success) {
-                            alert(data.error);
-                          } else {
-                            window.open(data.url, '_blank');
-                          }
-                        }}
-                        className="w-full py-2 bg-transparent border border-[var(--color-brand-green)] text-[var(--color-brand-green)] hover:bg-[var(--color-brand-green)] hover:text-black transition-colors font-medium text-sm flex items-center justify-center gap-2"
-                      >
-                        ACCESS LINK <span className="text-[10px]">↗</span>
-                      </button>
-
-                      <button
-                        onClick={() => handleSaveJob(job.id)}
-                        disabled={savedJobIds.has(job.id) || savingJobId === job.id}
-                        className={`w-full py-2 border text-xs font-medium flex items-center justify-center gap-2 transition-colors ${
-                          savedJobIds.has(job.id)
-                            ? 'border-[var(--color-brand-amber)]/40 text-[var(--color-brand-amber)]/60 cursor-default'
-                            : 'border-[var(--color-brand-border-hi)] text-[var(--color-brand-muted)] hover:border-[var(--color-brand-amber)] hover:text-[var(--color-brand-amber)]'
-                        }`}
-                      >
-                        {savedJobIds.has(job.id) ? (
-                          <><BookmarkCheck className="w-3.5 h-3.5" /> SAVED</>
-                        ) : savingJobId === job.id ? (
-                          <span className="animate-pulse">SAVING...</span>
-                        ) : (
-                          <><Bookmark className="w-3.5 h-3.5" /> SAVE JOB</>
+                        <h3 className="text-lg font-semibold text-[var(--color-brand-text)] mb-2 group-hover:text-[var(--color-brand-green)] transition-colors">
+                          {job.title}
+                        </h3>
+                        {/* Why this fits you */}
+                        {why && (
+                          <p className="text-sm text-[var(--color-brand-amber)] mb-3 italic">
+                            &quot;{why}&quot;
+                          </p>
                         )}
-                      </button>
+                        {job.description ? (
+                          <div className="text-sm text-[var(--color-brand-muted)] line-clamp-3 leading-relaxed mb-4">
+                            {job.description}
+                          </div>
+                        ) : (
+                          <button 
+                            onClick={() => handleFetchJd(job.id)}
+                            disabled={fetchingJdId === job.id}
+                            className="mb-4 text-xs text-[var(--color-brand-green)] border border-[var(--color-brand-green)] px-3 py-1 bg-[#1e2b1e] hover:bg-[var(--color-brand-green)] hover:text-black transition-colors"
+                          >
+                            {fetchingJdId === job.id ? 'LOADING DESCRIPTION...' : 'LOAD DESCRIPTION'}
+                          </button>
+                        )}
+                        {/* Matched / missing skills */}
+                        {(job.matched_skills?.length > 0 || job.missing_skills?.length > 0) && (
+                          <div className="flex gap-4 text-xs flex-wrap mb-3">
+                            {job.matched_skills?.length > 0 && (
+                              <span className="text-[var(--color-brand-green)]">
+                                ✓ {job.matched_skills.join(', ')}
+                              </span>
+                            )}
+                            {job.missing_skills?.length > 0 && (
+                              <span className="text-[var(--color-brand-muted)]">
+                                ✗ Missing: {job.missing_skills.join(', ')}
+                              </span>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Curation notes (fallback when why field absorbed above) */}
+                        {job.curation_notes && !job.why && (
+                          <div className="bg-[var(--color-brand-bg)] border-l-2 border-[var(--color-brand-amber-dim)] p-3 pl-4 relative">
+                            <div className="absolute top-3 left-[-11px] bg-[var(--color-brand-bg)]">
+                              <Briefcase className="w-4 h-4 text-[var(--color-brand-amber-dim)]" />
+                            </div>
+                            <p className="text-xs text-[var(--color-brand-amber)] font-medium mb-1 uppercase tracking-wider">AI Curation Notes:</p>
+                            <p className="text-sm text-[var(--color-brand-text)] opacity-90">{job.curation_notes}</p>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex flex-col items-end justify-between min-w-[140px] border-t border-[var(--color-brand-border)] pt-4 md:border-t-0 md:pt-0 gap-3">
+                        <div className="text-right text-xs text-[var(--color-brand-muted)] mb-2">
+                          <div className="flex items-center gap-1 justify-end text-[var(--color-brand-green)]">
+                            <CheckCircle2 className="w-4 h-4" /> VERIFIED
+                          </div>
+                        </div>
+
+                        <button 
+                          onClick={async () => {
+                            if (!user) return;
+                            const { data, error } = await supabase.rpc('record_job_view', { p_job_id: job.id });
+                            if (error) {
+                              alert("An error occurred while tracking your application.");
+                              return;
+                            }
+                            if (!data.success) {
+                              alert(data.error);
+                            } else {
+                              window.open(data.url, '_blank');
+                            }
+                          }}
+                          className="w-full py-2 bg-transparent border border-[var(--color-brand-green)] text-[var(--color-brand-green)] hover:bg-[var(--color-brand-green)] hover:text-black transition-colors font-medium text-sm flex items-center justify-center gap-2"
+                        >
+                          ACCESS LINK <span className="text-[10px]">↗</span>
+                        </button>
+
+                        <button
+                          onClick={() => handleSaveJob(job.id)}
+                          disabled={savedJobIds.has(job.id) || savingJobId === job.id}
+                          className={`w-full py-2 border text-xs font-medium flex items-center justify-center gap-2 transition-colors ${
+                            savedJobIds.has(job.id)
+                              ? 'border-[var(--color-brand-amber)]/40 text-[var(--color-brand-amber)]/60 cursor-default'
+                              : 'border-[var(--color-brand-border-hi)] text-[var(--color-brand-muted)] hover:border-[var(--color-brand-amber)] hover:text-[var(--color-brand-amber)]'
+                          }`}
+                        >
+                          {savedJobIds.has(job.id) ? (
+                            <><BookmarkCheck className="w-3.5 h-3.5" /> SAVED</>
+                          ) : savingJobId === job.id ? (
+                            <span className="animate-pulse">SAVING...</span>
+                          ) : (
+                            <><Bookmark className="w-3.5 h-3.5" /> SAVE JOB</>
+                          )}
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                </motion.div>
-              ))}
+                  </motion.div>
+                );
+              })}
             </AnimatePresence>
             {results.length === 0 && (
               <div className="text-center p-8 text-[var(--color-brand-muted)]">No active leads match your wedge skills yet.</div>
             )}
           </div>
+
+          {/* Tier-aware bottom bar */}
+          {user && results.length > 0 && (
+            userTier === 'elite' ? (
+              // Elite: informational — no upgrade push
+              <motion.div
+                initial={{ y: 80, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.5, type: 'spring', stiffness: 200 }}
+                className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-between gap-4 bg-[var(--color-brand-bg)] border-t-2 border-[var(--color-brand-green)] px-6 py-4 shadow-2xl"
+              >
+                <p className="text-sm text-[var(--color-brand-muted)]">
+                  <span className="text-[var(--color-brand-green)] font-bold">{results.length} matches</span> returned from{' '}
+                  <span className="text-[var(--color-brand-text)] font-bold">{totalScored || results.length}</span> scored.
+                  {' '}For more roles, browse the{' '}
+                  <button
+                    onClick={() => window.location.href = '/'}
+                    className="text-[var(--color-brand-amber)] underline hover:no-underline"
+                  >
+                    live job feed →
+                  </button>
+                </p>
+                <span className="text-xs border border-[var(--color-brand-green)]/40 text-[var(--color-brand-green)] px-3 py-1 whitespace-nowrap">
+                  ⚡ ELITE
+                </span>
+              </motion.div>
+            ) : (
+              // Free / Pro: upgrade CTA
+              <motion.div
+                initial={{ y: 80, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.5, type: 'spring', stiffness: 200 }}
+                className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-between gap-4 bg-[var(--color-brand-bg)] border-t-2 border-[var(--color-brand-amber)] px-6 py-4 shadow-2xl"
+              >
+                <p className="text-sm text-[var(--color-brand-text)]">
+                  Showing <span className="text-[var(--color-brand-amber)] font-bold">{results.length}</span> matches.
+                  {' '}<span className="text-[var(--color-brand-muted)]">More verified jobs await — upgrade to unlock them all.</span>
+                </p>
+                <button
+                  onClick={() => window.location.href = '/upgrade'}
+                  className="whitespace-nowrap px-5 py-2 bg-[var(--color-brand-amber)] text-black font-bold text-sm tracking-widest hover:bg-[#f5b545] transition-colors flex-shrink-0"
+                >
+                  {userTier === 'pro' ? 'GO ELITE →' : 'GET PRO →'}
+                </button>
+              </motion.div>
+            )
+          )}
         </motion.div>
       )}
     </>

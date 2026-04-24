@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'motion/react';
 import {
   User, Briefcase, Star, Settings, Trash2, ExternalLink,
-  CheckCircle2, Crown, Zap, Plus, X, Save, ChevronRight
+  CheckCircle2, Crown, Zap, Plus, X, Save, ChevronRight, AlertTriangle
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
@@ -31,7 +31,7 @@ interface SavedJob {
     url: string;
     ats_source: string | null;
     created_at: string;
-  };
+  } | null; // null when the job was deleted from the DB
 }
 
 const INDUSTRIES = [
@@ -293,31 +293,51 @@ export function DashboardPage() {
               </button>
             </div>
           ) : (
-            savedJobs.map((saved) => (
+          savedJobs.map((saved) => {
+              const isRemoved = !saved.job_postings;
+              return (
               <div
                 key={saved.id}
-                className="border border-[var(--color-brand-border-hi)] bg-[var(--color-brand-bg2)] p-4 hover:border-[var(--color-brand-green)] transition-colors flex flex-col md:flex-row md:items-center justify-between gap-4"
+                className={`border border-[var(--color-brand-border-hi)] bg-[var(--color-brand-bg2)] p-4 transition-colors flex flex-col md:flex-row md:items-center justify-between gap-4 ${
+                  isRemoved ? 'opacity-50' : 'hover:border-[var(--color-brand-green)]'
+                }`}
               >
                 <div className="flex-grow">
-                  <div className="text-[var(--color-brand-muted)] text-xs mb-1 uppercase">{saved.job_postings?.company_domain?.replace(/\.placeholder$/i, '').split('.')[0]}</div>
-                  <div className="text-[var(--color-brand-text)] font-semibold">{saved.job_postings?.title}</div>
-                  <div className="flex items-center gap-3 mt-2 text-xs text-[var(--color-brand-muted)]">
-                    <span className="flex items-center gap-1">
-                      <CheckCircle2 className="w-3 h-3 text-[var(--color-brand-green)]" />
-                      {saved.job_postings?.location || 'Remote'}
-                    </span>
-                    <span>Saved {new Date(saved.created_at).toLocaleDateString()}</span>
-                  </div>
+                  {isRemoved ? (
+                    <>
+                      <div className="flex items-center gap-2 text-[var(--color-brand-red)] text-sm font-semibold mb-1">
+                        <AlertTriangle className="w-4 h-4" />
+                        This role has been filled or removed
+                      </div>
+                      <div className="text-xs text-[var(--color-brand-muted)]">
+                        Saved {new Date(saved.created_at).toLocaleDateString()}
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="text-[var(--color-brand-muted)] text-xs mb-1 uppercase">{saved.job_postings!.company_domain?.replace(/\.placeholder$/i, '').split('.')[0]}</div>
+                      <div className="text-[var(--color-brand-text)] font-semibold">{saved.job_postings!.title}</div>
+                      <div className="flex items-center gap-3 mt-2 text-xs text-[var(--color-brand-muted)]">
+                        <span className="flex items-center gap-1">
+                          <CheckCircle2 className="w-3 h-3 text-[var(--color-brand-green)]" />
+                          {saved.job_postings!.location || 'Remote'}
+                        </span>
+                        <span>Saved {new Date(saved.created_at).toLocaleDateString()}</span>
+                      </div>
+                    </>
+                  )}
                 </div>
                 <div className="flex items-center gap-2">
-                  <a
-                    href={saved.job_postings?.url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="flex items-center gap-1 px-3 py-2 border border-[var(--color-brand-green)] text-[var(--color-brand-green)] text-xs hover:bg-[var(--color-brand-green)] hover:text-black transition-colors"
-                  >
-                    <ExternalLink className="w-3 h-3" /> APPLY
-                  </a>
+                  {!isRemoved && (
+                    <a
+                      href={saved.job_postings!.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex items-center gap-1 px-3 py-2 border border-[var(--color-brand-green)] text-[var(--color-brand-green)] text-xs hover:bg-[var(--color-brand-green)] hover:text-black transition-colors"
+                    >
+                      <ExternalLink className="w-3 h-3" /> APPLY
+                    </a>
+                  )}
                   <button
                     onClick={() => removeSavedJob(saved.id)}
                     className="p-2 border border-[var(--color-brand-red)]/40 text-[var(--color-brand-red)] hover:bg-[var(--color-brand-red)] hover:text-white transition-colors"
@@ -326,7 +346,8 @@ export function DashboardPage() {
                   </button>
                 </div>
               </div>
-            ))
+            );
+          })
           )}
         </motion.div>
       )}
