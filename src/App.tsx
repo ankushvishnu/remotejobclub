@@ -80,7 +80,7 @@ function AppShell() {
           to="/"
           className="flex items-center gap-2 sm:gap-3 hover:opacity-80 transition-opacity min-w-0"
         >
-          <Terminal className="text-[var(--color-brand-amber)] w-5 h-5 flex-shrink-0" />
+          <img src="/remotejobclub_icon_512x512.png" alt="RemoteJob.Club Logo" className="w-6 h-6 flex-shrink-0" />
           <h1 className="text-base md:text-lg font-semibold tracking-tight text-[var(--color-brand-text)] truncate">
             REMOTEJOB.CLUB{' '}
             <span className="text-[var(--color-brand-muted)] font-normal hidden sm:inline">// TERMINAL</span>
