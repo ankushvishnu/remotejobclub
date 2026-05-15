@@ -1,0 +1,51 @@
+name: Discover & Seed ATS Companies
+
+on:
+  schedule:
+    - cron: '0 1 1 * *'   # 1st of every month at 1am UTC
+  workflow_dispatch:       # manual trigger from GitHub UI
+
+jobs:
+  discover-and-seed:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run ATS discovery
+        # Update paths if you pushed .md files elsewhere
+        run: node scripts/discover_ats.mjs data/remote-work-io-companies.md data/zapier-remote-companies.md
+
+      - name: Find generated SQL file
+        id: find_sql
+        run: |
+          SQL_FILE=$(ls -t supabase/migrations/*_seed_discovered_ats.sql 2>/dev/null | head -1)
+          if [ -z "$SQL_FILE" ]; then
+            echo "No SQL file generated — nothing discovered."
+            echo "found=false" >> $GITHUB_OUTPUT
+          else
+            echo "found=true" >> $GITHUB_OUTPUT
+            echo "sql_file=$SQL_FILE" >> $GITHUB_OUTPUT
+            head -20 "$SQL_FILE"
+          fi
+
+      - name: Upsert companies into Supabase
+        if: steps.find_sql.outputs.found == 'true'
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SQL_FILE: ${{ steps.find_sql.outputs.sql_file }}
+        run: node scripts/seed_supabase.mjs
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "### ATS Discovery Complete" >> $GITHUB_STEP_SUMMARY
+          echo "- Discovered: ${{ steps.find_sql.outputs.found }}" >> $GITHUB_STEP_SUMMARY
+          echo "- File: \`${{ steps.find_sql.outputs.sql_file || 'none' }}\`" >> $GITHUB_STEP_SUMMARY
