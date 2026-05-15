@@ -1,20 +1,16 @@
 // scripts/seed_supabase.mjs
-// Called by GitHub Actions after discover_ats.mjs generates a SQL file.
-// Parses the INSERT VALUES and upserts into Supabase via REST API.
-
 import fs from 'fs';
 
-const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_URL = process.env.SUPABASE_URL || 'https://rikvsulujezoxmcxeauk.supabase.co';
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const SQL_FILE = process.env.SQL_FILE;
 
-if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
-  console.error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');
+if (!SERVICE_ROLE_KEY) {
+  console.error('Missing SUPABASE_SERVICE_ROLE_KEY');
   process.exit(1);
 }
 
-// Find the SQL file if not passed explicitly
-let sqlPath = SQL_FILE;
+// Find the SQL file — from env or by scanning the migrations dir
+let sqlPath = process.env.SQL_FILE;
 if (!sqlPath) {
   const files = fs.readdirSync('supabase/migrations')
     .filter(f => f.endsWith('_seed_discovered_ats.sql'))
@@ -42,9 +38,9 @@ let m;
 while ((m = re.exec(valuesBlock)) !== null) {
   tuples.push({
     company_name: m[1].replace(/''/g, "'"),
-    careers_url:  m[2].replace(/''/g, "'"),
+    careers_url: m[2].replace(/''/g, "'"),
     ats_provider: m[3].replace(/''/g, "'"),
-    board_token:  m[4].replace(/''/g, "'"),
+    board_token: m[4].replace(/''/g, "'"),
     status: 'ACTIVE',
   });
 }
@@ -54,10 +50,8 @@ if (tuples.length === 0) {
   process.exit(0);
 }
 
-console.log(`Upserting ${tuples.length} companies into Supabase...`);
+console.log(`Upserting ${tuples.length} companies into ${SUPABASE_URL}...`);
 
-// Supabase REST upsert — requires unique constraint on board_token
-// 'resolution=merge-duplicates' = ON CONFLICT DO UPDATE
 const res = await fetch(`${SUPABASE_URL}/rest/v1/company_directory`, {
   method: 'POST',
   headers: {
