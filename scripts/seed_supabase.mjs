@@ -9,7 +9,6 @@ if (!SERVICE_ROLE_KEY) {
   process.exit(1);
 }
 
-// Find the SQL file — from env or by scanning the migrations dir
 let sqlPath = process.env.SQL_FILE;
 if (!sqlPath) {
   const files = fs.readdirSync('supabase/migrations')
@@ -25,7 +24,6 @@ if (!sqlPath || !fs.existsSync(sqlPath)) {
 
 const sql = fs.readFileSync(sqlPath, 'utf-8');
 
-// Parse tuples from: ('name', 'url', 'ats', 'token')
 const valuesBlock = sql.match(/VALUES\s*([\s\S]+?);/i)?.[1];
 if (!valuesBlock) {
   console.error('Could not find VALUES block in SQL file.');
@@ -50,15 +48,16 @@ if (tuples.length === 0) {
   process.exit(0);
 }
 
-console.log(`Upserting ${tuples.length} companies into ${SUPABASE_URL}...`);
+console.log(`Upserting ${tuples.length} companies into Supabase...`);
 
-const res = await fetch(`${SUPABASE_URL}/rest/v1/company_directory`, {
+// Use ?on_conflict= to explicitly tell Supabase which column to upsert on
+const res = await fetch(`${SUPABASE_URL}/rest/v1/company_directory?on_conflict=board_token`, {
   method: 'POST',
   headers: {
     'apikey': SERVICE_ROLE_KEY,
     'Authorization': `Bearer ${SERVICE_ROLE_KEY}`,
     'Content-Type': 'application/json',
-    'Prefer': 'resolution=merge-duplicates',
+    'Prefer': 'resolution=merge-duplicates,return=minimal',
   },
   body: JSON.stringify(tuples),
 });
