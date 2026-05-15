@@ -12,28 +12,29 @@ serve(async (req) => {
   }
 
   try {
+    const { limit = 50, offset = 0 } = await req.json().catch(() => ({}));
+
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? Deno.env.get('SUPABASE_ANON_KEY') ?? ''
     )
 
-    // Fetch active targets from the company_directory table
+    // Fetch batch of targets to avoid resource exhaustion
     const { data: targets, error: fetchErr } = await supabaseClient
       .from('company_directory')
       .select('*')
       .eq('status', 'ACTIVE')
+      .range(offset, offset + limit - 1);
 
     if (fetchErr) throw fetchErr
 
     if (!targets || targets.length === 0) {
-      return new Response(JSON.stringify({ success: true, message: 'No active companies found in directory' }), {
+      return new Response(JSON.stringify({ success: true, message: 'No more active companies to process' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
 
-    let allJobs: any[] = [];
-
-    // Helper to fetch and parse Ashby
+    // Helper Fetchers
     const fetchAshby = async (company: string, board: string) => {
       const res = await fetch(`https://api.ashbyhq.com/posting-api/job-board/${board}`);
       if (!res.ok) return [];
@@ -49,7 +50,6 @@ serve(async (req) => {
       }));
     };
 
-    // Helper to fetch and parse Greenhouse
     const fetchGreenhouse = async (company: string, board: string) => {
       const res = await fetch(`https://boards-api.greenhouse.io/v1/boards/${board}/jobs`);
       if (!res.ok) return [];
@@ -65,7 +65,6 @@ serve(async (req) => {
       }));
     };
 
-    // Helper to fetch and parse Lever
     const fetchLever = async (company: string, board: string) => {
       const res = await fetch(`https://api.lever.co/v0/postings/${board}?mode=json`);
       if (!res.ok) return [];
@@ -81,40 +80,54 @@ serve(async (req) => {
       }));
     };
 
-    // Execute fetches
-    for (const t of targets) {
-      try {
-        let jobs = [];
-        if (t.ats_provider === 'ashby') jobs = await fetchAshby(t.company_name, t.board_token);
-        if (t.ats_provider === 'greenhouse') jobs = await fetchGreenhouse(t.company_name, t.board_token);
-        if (t.ats_provider === 'lever') jobs = await fetchLever(t.company_name, t.board_token);
-        if (jobs && jobs.length > 0) allJobs = [...allJobs, ...jobs.slice(0, 30)]; // Take top 30 from each
-      } catch (err) {
-        console.warn(`Failed scraping ${t.company_name}`, err);
-      }
+    // Process companies with limited concurrency (10 at a time)
+    const CONCURRENCY_LIMIT = 10;
+    let allJobs: any[] = [];
+    
+    for (let i = 0; i < targets.length; i += CONCURRENCY_LIMIT) {
+      const chunk = targets.slice(i, i + CONCURRENCY_LIMIT);
+      const results = await Promise.all(chunk.map(async (t) => {
+        try {
+          if (t.ats_provider === 'ashby') return await fetchAshby(t.company_name, t.board_token);
+          if (t.ats_provider === 'greenhouse') return await fetchGreenhouse(t.company_name, t.board_token);
+          if (t.ats_provider === 'lever') return await fetchLever(t.company_name, t.board_token);
+          return [];
+        } catch (e) {
+          console.error(`Error fetching ${t.company_name}:`, e);
+          return [];
+        }
+      }));
+      
+      results.forEach(jobs => {
+        if (jobs) allJobs = [...allJobs, ...jobs.slice(0, 30)];
+      });
     }
 
     if (allJobs.length > 0) {
-      // Clear out old apify/google jobs to strictly ensure direct ATS URLs are present
-      await supabaseClient.from('job_postings').delete().neq('ats_source', 'ashby').neq('ats_source', 'greenhouse').neq('ats_source', 'lever');
+      // NOTE: Only clear out old jobs if you are running the VERY FIRST batch (offset 0)
+      // or consider removing this delete line if you want to keep data from previous batch runs
+      if (offset === 0) {
+        await supabaseClient.from('job_postings').delete()
+          .in('ats_source', ['ashby', 'greenhouse', 'lever']);
+      }
 
       const { error: insertErr } = await supabaseClient
         .from('job_postings')
         .upsert(allJobs, { onConflict: 'semantic_hash', ignoreDuplicates: true });
         
-      if (insertErr) console.error("Insert error:", insertErr);
+      if (insertErr) throw insertErr;
     }
 
     return new Response(JSON.stringify({ 
       success: true, 
       scraped_count: allJobs.length,
-      companies_checked: targets.length
+      companies_processed: targets.length,
+      next_offset: offset + targets.length
     }, null, 2), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
 
   } catch (err: any) {
-    console.error("ingest-ats error:", err)
     return new Response(JSON.stringify({ error: err.message }), { 
       status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
     })

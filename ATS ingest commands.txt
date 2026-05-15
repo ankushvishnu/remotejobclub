@@ -1,0 +1,16 @@
+##Run below command to fetch all ATS jobs from Ashby's, Greenhouse and Lever##
+
+node scripts/discover_ats.mjs data/remote-work-io-companies.md data/zapier-remote-companies.md
+
+
+##After the sql query is generated, run the query to fetch job postings in Supabase##
+
+##Run below commands to invoke ingest-ats function##
+
+curl -i -X POST "https://rikvsulujezoxmcxeauk.supabase.co/functions/v1/ingest-ats" -H "Authorization: Bearer sb_publishable_vB63tJmUu70gWWA7U4p00w_7sFk9RoH" -H "apikey: sb_publishable_vB63tJmUu70gWWA7U4p00w_7sFk9RoH" -H "Content-Type: application/json" -d '{"limit": 50, "offset": 0}'
+
+curl -i -X POST "https://rikvsulujezoxmcxeauk.supabase.co/functions/v1/ingest-ats" -H "Authorization: Bearer sb_publishable_vB63tJmUu70gWWA7U4p00w_7sFk9RoH" -H "apikey: sb_publishable_vB63tJmUu70gWWA7U4p00w_7sFk9RoH" -H "Content-Type: application/json" -d '{"limit": 50, "offset": 50}'
+
+curl -i -X POST "https://rikvsulujezoxmcxeauk.supabase.co/functions/v1/ingest-ats" -H "Authorization: Bearer sb_publishable_vB63tJmUu70gWWA7U4p00w_7sFk9RoH" -H "apikey: sb_publishable_vB63tJmUu70gWWA7U4p00w_7sFk9RoH" -H "Content-Type: application/json" -d '{"limit": 50, "offset": 100}'
+
+##Keep offsetting the count to ingest more jobs. Offset should be equal to the number of jobs ingested in the previous run##

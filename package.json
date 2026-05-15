@@ -9,7 +9,9 @@
     "preview": "vite preview",
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit",
-    "start": "vite"
+    "start": "vite",
+    "discover:ats": "node scripts/discover_ats.mjs data/remote-work-io-companies.md data/zapier-remote-companies.md",
+    "ingest:ats": "supabase functions invoke ingest-ats --no-verify-jwt"
   },
   "dependencies": {
     "@google/genai": "^1.29.0",
