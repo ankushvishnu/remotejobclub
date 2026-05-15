@@ -19,7 +19,6 @@ jobs:
           node-version: '20'
 
       - name: Run ATS discovery
-        # Update paths if you pushed .md files elsewhere
         run: node scripts/discover_ats.mjs data/remote-work-io-companies.md data/zapier-remote-companies.md
 
       - name: Find generated SQL file
@@ -38,7 +37,7 @@ jobs:
       - name: Upsert companies into Supabase
         if: steps.find_sql.outputs.found == 'true'
         env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_URL: https://rikvsulujezoxmcxeauk.supabase.co
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           SQL_FILE: ${{ steps.find_sql.outputs.sql_file }}
         run: node scripts/seed_supabase.mjs
