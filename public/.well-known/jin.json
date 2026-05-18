@@ -1,129 +1,142 @@
 {
   "aip_version": "0.1",
   "app": {
-    "name": "remotejob.club",
-    "description": "Find your dream remote job!",
+    "name": "RemoteJob.club",
+    "description": "Curated remote jobs from verified company career pages. No ghost jobs, no expired listings, no recruiter spam. AI-powered resume matching included.",
     "url": "https://remotejob.club",
     "contact": "ankushvishnuvardhan@gmail.com"
   },
   "auth": {
-    "type": "none"
+    "type": "bearer",
+    "docs": "https://remotejob.club/auth"
   },
   "intents": [
     {
-      "id": "get_auth",
-      "name": "View /auth",
-      "description": "React SPA route: /auth",
+      "id": "get_featured_jobs",
+      "name": "Get Featured Jobs",
+      "description": "Get curated remote job listings from verified company career pages. Returns up to 15 jobs for anonymous users, up to 70 for authenticated users. No ghost jobs or expired listings.",
       "triggers": [
-        "open auth page",
-        "view /auth"
+        "show me remote jobs",
+        "find remote work",
+        "what remote jobs are available",
+        "show featured remote jobs",
+        "browse remote job listings",
+        "find work from home jobs",
+        "show me curated jobs",
+        "what jobs are on remotejob.club"
       ],
-      "category": "developer",
+      "category": "productivity",
       "method": "GET",
-      "endpoint": "/auth",
-      "parameters": {},
+      "endpoint": "/api/jobs",
+      "parameters": {
+        "limit": {
+          "type": "number",
+          "description": "Number of jobs to return. Max 15 for anonymous, 70 for authenticated.",
+          "required": false,
+          "default": 15
+        },
+        "category": {
+          "type": "string",
+          "description": "Filter by job category",
+          "required": false,
+          "example": "engineering"
+        }
+      },
       "requires_auth": false,
       "destructive": false,
       "confirmation_required": false
     },
     {
-      "id": "get_terminal",
-      "name": "View /terminal",
-      "description": "React SPA route: /terminal",
+      "id": "login",
+      "name": "Authenticate User",
+      "description": "Log in to RemoteJob.club to unlock up to 70 curated remote job listings instead of 15.",
       "triggers": [
-        "open terminal page",
-        "view /terminal"
+        "log in to remotejob.club",
+        "sign in",
+        "authenticate",
+        "I want to see more jobs",
+        "unlock more listings",
+        "get full job access"
       ],
-      "category": "developer",
-      "method": "GET",
-      "endpoint": "/terminal",
-      "parameters": {},
+      "category": "identity",
+      "method": "POST",
+      "endpoint": "/api/auth/login",
+      "parameters": {
+        "email": {
+          "type": "string",
+          "description": "User email address",
+          "required": true,
+          "example": "user@example.com"
+        },
+        "password": {
+          "type": "string",
+          "description": "User password",
+          "required": true
+        }
+      },
       "requires_auth": false,
       "destructive": false,
       "confirmation_required": false
     },
     {
-      "id": "get_dashboard",
-      "name": "View /dashboard",
-      "description": "React SPA route: /dashboard",
+      "id": "match_resume",
+      "name": "AI Resume Match",
+      "description": "Upload a resume to get up to 30 AI-matched remote jobs ranked by fit. Uses the Terminal feature to analyse your resume against verified job listings.",
       "triggers": [
-        "open dashboard page",
-        "view /dashboard"
+        "match my resume to jobs",
+        "find jobs that match my resume",
+        "upload my resume",
+        "analyse my resume",
+        "find best remote jobs for me",
+        "personalise my job search",
+        "use terminal to match jobs",
+        "which jobs fit my skills"
       ],
-      "category": "developer",
-      "method": "GET",
-      "endpoint": "/dashboard",
-      "parameters": {},
+      "category": "productivity",
+      "method": "POST",
+      "endpoint": "/api/terminal/match",
+      "parameters": {
+        "resume": {
+          "type": "string",
+          "description": "Resume file in PDF or plain text format, base64 encoded",
+          "required": true
+        }
+      },
+      "returns": {
+        "description": "Up to 30 remote jobs ranked by AI match score against the uploaded resume"
+      },
       "requires_auth": false,
       "destructive": false,
       "confirmation_required": false
     },
     {
-      "id": "get_privacy",
-      "name": "View /privacy",
-      "description": "React SPA route: /privacy",
+      "id": "get_job_detail",
+      "name": "Get Job Detail",
+      "description": "Get full details of a specific remote job listing including company, role, requirements, and application link.",
       "triggers": [
-        "open privacy page",
-        "view /privacy"
+        "show me this job",
+        "get job details",
+        "tell me more about this role",
+        "what are the requirements for this job",
+        "how do I apply for this job"
       ],
-      "category": "developer",
+      "category": "productivity",
       "method": "GET",
-      "endpoint": "/privacy",
-      "parameters": {},
-      "requires_auth": false,
-      "destructive": false,
-      "confirmation_required": false
-    },
-    {
-      "id": "get_terms",
-      "name": "View /terms",
-      "description": "React SPA route: /terms",
-      "triggers": [
-        "open terms page",
-        "view /terms"
-      ],
-      "category": "developer",
-      "method": "GET",
-      "endpoint": "/terms",
-      "parameters": {},
-      "requires_auth": false,
-      "destructive": false,
-      "confirmation_required": false
-    },
-    {
-      "id": "get_upgrade",
-      "name": "View /upgrade",
-      "description": "React SPA route: /upgrade",
-      "triggers": [
-        "open upgrade page",
-        "view /upgrade"
-      ],
-      "category": "developer",
-      "method": "GET",
-      "endpoint": "/upgrade",
-      "parameters": {},
-      "requires_auth": false,
-      "destructive": false,
-      "confirmation_required": false
-    },
-    {
-      "id": "get_payment_success",
-      "name": "View /payment/success",
-      "description": "React SPA route: /payment/success",
-      "triggers": [
-        "open payment/success page",
-        "view /payment/success"
-      ],
-      "category": "developer",
-      "method": "GET",
-      "endpoint": "/payment/success",
-      "parameters": {},
+      "endpoint": "/api/jobs/{job_id}",
+      "parameters": {
+        "job_id": {
+          "type": "string",
+          "description": "Unique identifier of the job listing",
+          "required": true,
+          "example": "job_abc123"
+        }
+      },
       "requires_auth": false,
       "destructive": false,
       "confirmation_required": false
     }
   ],
-  "published": "2026-05-18T04:23:19.423Z",
+  "published": "2026-05-18T00:00:00Z",
   "registry": {
     "verified": false
   }
