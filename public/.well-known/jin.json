@@ -1,0 +1,130 @@
+{
+  "aip_version": "0.1",
+  "app": {
+    "name": "remotejob.club",
+    "description": "Find your dream remote job!",
+    "url": "https://remotejob.club",
+    "contact": "ankushvishnuvardhan@gmail.com"
+  },
+  "auth": {
+    "type": "none"
+  },
+  "intents": [
+    {
+      "id": "get_auth",
+      "name": "View /auth",
+      "description": "React SPA route: /auth",
+      "triggers": [
+        "open auth page",
+        "view /auth"
+      ],
+      "category": "developer",
+      "method": "GET",
+      "endpoint": "/auth",
+      "parameters": {},
+      "requires_auth": false,
+      "destructive": false,
+      "confirmation_required": false
+    },
+    {
+      "id": "get_terminal",
+      "name": "View /terminal",
+      "description": "React SPA route: /terminal",
+      "triggers": [
+        "open terminal page",
+        "view /terminal"
+      ],
+      "category": "developer",
+      "method": "GET",
+      "endpoint": "/terminal",
+      "parameters": {},
+      "requires_auth": false,
+      "destructive": false,
+      "confirmation_required": false
+    },
+    {
+      "id": "get_dashboard",
+      "name": "View /dashboard",
+      "description": "React SPA route: /dashboard",
+      "triggers": [
+        "open dashboard page",
+        "view /dashboard"
+      ],
+      "category": "developer",
+      "method": "GET",
+      "endpoint": "/dashboard",
+      "parameters": {},
+      "requires_auth": false,
+      "destructive": false,
+      "confirmation_required": false
+    },
+    {
+      "id": "get_privacy",
+      "name": "View /privacy",
+      "description": "React SPA route: /privacy",
+      "triggers": [
+        "open privacy page",
+        "view /privacy"
+      ],
+      "category": "developer",
+      "method": "GET",
+      "endpoint": "/privacy",
+      "parameters": {},
+      "requires_auth": false,
+      "destructive": false,
+      "confirmation_required": false
+    },
+    {
+      "id": "get_terms",
+      "name": "View /terms",
+      "description": "React SPA route: /terms",
+      "triggers": [
+        "open terms page",
+        "view /terms"
+      ],
+      "category": "developer",
+      "method": "GET",
+      "endpoint": "/terms",
+      "parameters": {},
+      "requires_auth": false,
+      "destructive": false,
+      "confirmation_required": false
+    },
+    {
+      "id": "get_upgrade",
+      "name": "View /upgrade",
+      "description": "React SPA route: /upgrade",
+      "triggers": [
+        "open upgrade page",
+        "view /upgrade"
+      ],
+      "category": "developer",
+      "method": "GET",
+      "endpoint": "/upgrade",
+      "parameters": {},
+      "requires_auth": false,
+      "destructive": false,
+      "confirmation_required": false
+    },
+    {
+      "id": "get_payment_success",
+      "name": "View /payment/success",
+      "description": "React SPA route: /payment/success",
+      "triggers": [
+        "open payment/success page",
+        "view /payment/success"
+      ],
+      "category": "developer",
+      "method": "GET",
+      "endpoint": "/payment/success",
+      "parameters": {},
+      "requires_auth": false,
+      "destructive": false,
+      "confirmation_required": false
+    }
+  ],
+  "published": "2026-05-18T04:23:19.423Z",
+  "registry": {
+    "verified": false
+  }
+}
