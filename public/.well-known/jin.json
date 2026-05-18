@@ -2,9 +2,9 @@
   "aip_version": "0.1",
   "app": {
     "name": "remotejob-club",
-    "description": "TODO: describe what your app does",
-    "url": "https://TODO.your-domain.com",
-    "contact": "TODO: dev@your-domain.com"
+    "description": "Find your dream remote job!",
+    "url": "https://remotejob.club",
+    "contact": "test@example.com"
   },
   "auth": {
     "type": "none"
